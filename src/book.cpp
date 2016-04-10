@@ -1,4 +1,4 @@
-#include "book.hpp"
+﻿#include "book.hpp"
 #include "position.hpp"
 #include "move.hpp"
 #include "usi.hpp"

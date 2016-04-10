@@ -1,4 +1,4 @@
-#ifndef APERY_SQUARE_HPP
+﻿#ifndef APERY_SQUARE_HPP
 #define APERY_SQUARE_HPP
 
 #include "overloadEnumOperators.hpp"

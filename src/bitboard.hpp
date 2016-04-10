@@ -1,4 +1,4 @@
-#ifndef APERY_BITBOARD_HPP
+﻿#ifndef APERY_BITBOARD_HPP
 #define APERY_BITBOARD_HPP
 
 #include "common.hpp"

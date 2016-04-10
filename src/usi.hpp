@@ -1,4 +1,4 @@
-#ifndef APERY_USI_HPP
+﻿#ifndef APERY_USI_HPP
 #define APERY_USI_HPP
 
 #include "common.hpp"

@@ -1,4 +1,4 @@
-#ifndef APERY_PIECESCORE_HPP
+﻿#ifndef APERY_PIECESCORE_HPP
 #define APERY_PIECESCORE_HPP
 
 #include "score.hpp"

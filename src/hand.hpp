@@ -1,4 +1,4 @@
-#ifndef APERY_HAND_HPP
+﻿#ifndef APERY_HAND_HPP
 #define APERY_HAND_HPP
 
 #include "common.hpp"

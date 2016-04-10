@@ -1,4 +1,4 @@
-#include "position.hpp"
+﻿#include "position.hpp"
 #include "move.hpp"
 #include "mt64bit.hpp"
 #include "generateMoves.hpp"

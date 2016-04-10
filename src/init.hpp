@@ -1,4 +1,4 @@
-#ifndef APERY_INIT_HPP
+﻿#ifndef APERY_INIT_HPP
 #define APERY_INIT_HPP
 
 #include "ifdef.hpp"

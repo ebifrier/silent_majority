@@ -1,4 +1,4 @@
-#include "usi.hpp"
+﻿#include "usi.hpp"
 #include "position.hpp"
 #include "move.hpp"
 #include "movePicker.hpp"
@@ -390,7 +390,7 @@ void measureGenerateMoves(const Position& pos) {
 #endif
 
 #ifdef NDEBUG
-const std::string MyName = "Apery";
+const std::string MyName = "Apery_TWIG_DEV";
 #else
 const std::string MyName = "Apery Debug Build";
 #endif

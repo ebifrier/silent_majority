@@ -1,4 +1,4 @@
-#ifndef APERY_LEARNER_HPP
+﻿#ifndef APERY_LEARNER_HPP
 #define APERY_LEARNER_HPP
 
 #include "position.hpp"

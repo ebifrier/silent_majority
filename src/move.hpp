@@ -1,4 +1,4 @@
-#ifndef APERY_MOVE_HPP
+﻿#ifndef APERY_MOVE_HPP
 #define APERY_MOVE_HPP
 
 #include "common.hpp"

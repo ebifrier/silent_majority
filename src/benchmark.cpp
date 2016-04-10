@@ -1,4 +1,4 @@
-#include "benchmark.hpp"
+﻿#include "benchmark.hpp"
 #include "common.hpp"
 #include "usi.hpp"
 #include "position.hpp"

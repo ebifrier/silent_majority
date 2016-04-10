@@ -1,4 +1,4 @@
-#ifndef APERY_EVALLIST_HPP
+﻿#ifndef APERY_EVALLIST_HPP
 #define APERY_EVALLIST_HPP
 
 #include "square.hpp"

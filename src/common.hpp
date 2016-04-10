@@ -1,4 +1,4 @@
-#ifndef APERY_COMMON_HPP
+﻿#ifndef APERY_COMMON_HPP
 #define APERY_COMMON_HPP
 
 #include "ifdef.hpp"
@@ -317,6 +317,15 @@ template <typename T> inline void reverseEndian(T& r) {
 		std::swap(*begin, *(end - 1));
 	}
 }
+#endif
+#if defined(_MSC_VER)
+// Disable some silly and noisy warning from MSVC compiler
+#pragma warning(disable: 4127) // Conditional expression is constant
+#pragma warning(disable: 4146) // Unary minus operator applied to unsigned type
+#pragma warning(disable: 4800) // Forcing value to bool 'true' or 'false'
+#pragma warning(disable: 4244)
+#pragma warning(disable: 4521)
+#pragma warning(disable: 4522)
 #endif
 
 #endif // #ifndef APERY_COMMON_HPP

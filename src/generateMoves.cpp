@@ -1,4 +1,4 @@
-#include "generateMoves.hpp"
+﻿#include "generateMoves.hpp"
 #include "usi.hpp"
 
 namespace {

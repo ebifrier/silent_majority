@@ -1,4 +1,4 @@
-#ifndef APERY_COLOR_HPP
+﻿#ifndef APERY_COLOR_HPP
 #define APERY_COLOR_HPP
 
 #include "overloadEnumOperators.hpp"

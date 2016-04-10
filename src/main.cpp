@@ -1,4 +1,4 @@
-#include "common.hpp"
+﻿#include "common.hpp"
 #include "bitboard.hpp"
 #include "init.hpp"
 #include "position.hpp"

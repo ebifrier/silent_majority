@@ -1,4 +1,4 @@
-#ifndef APERY_MT64BIT_HPP
+﻿#ifndef APERY_MT64BIT_HPP
 #define APERY_MT64BIT_HPP
 
 #include "common.hpp"

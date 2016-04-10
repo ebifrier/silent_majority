@@ -1,4 +1,4 @@
-#include "common.hpp"
+﻿#include "common.hpp"
 #include "search.hpp"
 #include "usi.hpp"
 #include "timeManager.hpp"

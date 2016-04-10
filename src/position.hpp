@@ -1,4 +1,4 @@
-#ifndef APERY_POSITION_HPP
+﻿#ifndef APERY_POSITION_HPP
 #define APERY_POSITION_HPP
 
 #include "piece.hpp"

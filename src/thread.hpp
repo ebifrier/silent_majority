@@ -1,4 +1,4 @@
-#ifndef APERY_THREAD_HPP
+﻿#ifndef APERY_THREAD_HPP
 #define APERY_THREAD_HPP
 
 #include "common.hpp"

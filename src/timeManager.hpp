@@ -1,4 +1,4 @@
-#ifndef APERY_TIMEMANAGER_HPP
+﻿#ifndef APERY_TIMEMANAGER_HPP
 #define APERY_TIMEMANAGER_HPP
 
 #include "evaluate.hpp"

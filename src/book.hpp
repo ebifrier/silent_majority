@@ -1,4 +1,4 @@
-#ifndef APERY_BOOK_HPP
+﻿#ifndef APERY_BOOK_HPP
 #define APERY_BOOK_HPP
 
 #include "position.hpp"

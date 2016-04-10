@@ -1,4 +1,4 @@
-#ifndef APERY_GENERATEMOVES_HPP
+﻿#ifndef APERY_GENERATEMOVES_HPP
 #define APERY_GENERATEMOVES_HPP
 
 #include "common.hpp"

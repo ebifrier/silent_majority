@@ -1,4 +1,4 @@
-#ifndef APERY_MOVEPICKER_HPP
+﻿#ifndef APERY_MOVEPICKER_HPP
 #define APERY_MOVEPICKER_HPP
 
 #include "move.hpp"

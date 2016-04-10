@@ -1,4 +1,4 @@
-#ifndef APERY_SEARCH_HPP
+﻿#ifndef APERY_SEARCH_HPP
 #define APERY_SEARCH_HPP
 
 #include "move.hpp"
