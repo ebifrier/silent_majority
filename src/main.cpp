@@ -35,12 +35,17 @@ int main() {
 int main(int argc, char* argv[]) {
 	initTable();
 	Position::initZobrist();
-	auto s = std::unique_ptr<Searcher>(new Searcher);
-	s->init();
+	//auto s = std::unique_ptr<Search>(new Search);
+    Search::init();
+
+    USI::init(Options);
+    Threads.init();
+    TT.resize(Options["Hash"]);
+
 	// 一時オブジェクトの生成と破棄
-	std::unique_ptr<Evaluater>(new Evaluater)->init(s->options["Eval_Dir"], true);
-	s->doUSICommandLoop(argc, argv);
-	s->threads.exit();
+	std::unique_ptr<Evaluater>(new Evaluater)->init(Options["Eval_Dir"], true);
+	USI::loop(argc, argv);
+	Threads.exit();
 }
 
 #endif

@@ -7,6 +7,7 @@
 #include "piece.hpp"
 #include "pieceScore.hpp"
 #include "position.hpp"
+//#include "search.hpp"
 
 // 評価関数テーブルのオフセット。
 // f_xxx が味方の駒、e_xxx が敵の駒
@@ -1156,7 +1157,7 @@ struct EvalSum {
 };
 
 class Position;
-struct SearchStack;
+//struct SearchStack;
 
 const size_t EvaluateTableSize = 0x400000; // 134MB
 //const size_t EvaluateTableSize = 0x10000000; // 8GB
@@ -1167,6 +1168,6 @@ struct EvaluateHashTable : HashTable<EvaluateHashEntry, EvaluateTableSize> {};
 extern EvaluateHashTable g_evalTable;
 
 Score evaluateUnUseDiff(const Position& pos);
-Score evaluate(Position& pos, SearchStack* ss);
+//Score evaluate(Position& pos, Search::Stack* ss);
 
 #endif // #ifndef APERY_EVALUATE_HPP

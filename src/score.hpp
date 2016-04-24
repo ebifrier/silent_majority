@@ -7,7 +7,7 @@
 using Ply = int;
 
 const Ply MaxPly = 128;
-const Ply MaxPlyPlus2 = MaxPly + 2;
+//const Ply MaxPlyPlus6 = MaxPly + 6;
 
 enum Bound {
 	BoundNone  = 0,
@@ -31,7 +31,7 @@ enum Score {
 	ScoreMateLong      = 30002,
 	ScoreMate1Ply      = 32599,
 	ScoreMate0Ply      = 32600,
-	ScoreMateInMaxPly  = ScoreMate0Ply - MaxPly,
+	ScoreMateInMaxPly  = ScoreMate0Ply - 2*MaxPly,
 	ScoreMatedInMaxPly = -ScoreMateInMaxPly,
 	ScoreInfinite      = 32601,
 	ScoreNotEvaluated  = INT_MAX,

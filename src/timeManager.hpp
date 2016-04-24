@@ -2,20 +2,23 @@
 #define APERY_TIMEMANAGER_HPP
 
 #include "evaluate.hpp"
+#include "thread.hpp"
 
-struct LimitsType;
-
-class TimeManager {
+class TimeManagement {
 public:
-	void init(LimitsType& limits, const Ply currentPly, const Color us, Searcher* s);
-	void pvInstability(const int currChanges, const int prevChanges);
-	int availableTime() const { return optimumSearchTime_ + unstablePVExtraTime_; }
-	int maximumTime() const { return maximumSearchTime_; }
+  void init(Search::LimitsType& limits, Color us, int ply);
+  int optimum() const { return optimumTime; }
+  int maximum() const { return maximumTime; }
+  int elapsed() const { return int(Search::Limits.npmsec ? Threads.nodes_searched() : now() - startTime); }
+  
+  int64_t availableNodes; // When in 'nodes as time' mode
 
 private:
-	int optimumSearchTime_;
-	int maximumSearchTime_;
-	int unstablePVExtraTime_;
+  TimePoint startTime;
+  int optimumTime;
+  int maximumTime;
 };
+
+extern TimeManagement Time;
 
 #endif // #ifndef APERY_TIMEMANAGER_HPP

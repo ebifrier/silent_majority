@@ -93,7 +93,7 @@ std::tuple<Move, Score> Book::probe(const Position& pos, const std::string& fNam
 	u32 sum = 0;
 	Move move = Move::moveNone();
 	const Key key = bookKey(pos);
-	const Score min_book_score = static_cast<Score>(static_cast<int>(pos.searcher()->options["Min_Book_Score"]));
+	const Score min_book_score = static_cast<Score>(static_cast<int>(Options["Min_Book_Score"]));
 	Score score = ScoreZero;
 
 	if (fileName_ != fName && !open(fName.c_str()))
@@ -181,7 +181,7 @@ void makeBook(Position& pos, std::istringstream& ssCmd) {
 			std::cout << "!!! header only !!!" << std::endl;
 			return;
 		}
-		pos.set(DefaultStartPositionSFEN, pos.searcher()->threads.mainThread());
+		pos.set(DefaultStartPositionSFEN, Threads.main());
 		StateStackPtr SetUpStates = StateStackPtr(new std::stack<StateInfo>());
 		while (!line.empty()) {
 			const std::string moveStrCSA = line.substr(0, 6);
@@ -216,13 +216,13 @@ void makeBook(Position& pos, std::istringstream& ssCmd) {
 
 					std::istringstream ssCmd("byoyomi 1000");
 					go(pos, ssCmd);
-					pos.searcher()->threads.waitForThinkFinished();
+					Threads.main()->wait_for_search_finished();
 
 					pos.undoMove(move);
 					SetUpStates->pop();
 
 					// doMove してから search してるので点数が反転しているので直す。
-					const Score score = -pos.csearcher()->rootMoves[0].score_;
+                    const Score score = -pos.thisThread()->rootMoves[0].score;//-Search::RootMoves[0].score;
 #else
 					const Score score = ScoreZero;
 #endif

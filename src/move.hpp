@@ -66,6 +66,7 @@ public:
 	}
 	// 値が入っているか。
 	bool isNone() const { return (value() == MoveNone); }
+    bool is_ok() const { return to() != from(); }
 	// メンバ変数 value_ の取得
 	u32 value() const { return value_; }
 	Move operator |= (const Move rhs) {
@@ -150,6 +151,9 @@ inline Move makeDropMove(const PieceType pt, const Square to) { return from2Move
 struct MoveStack {
 	Move move;
 	int score;
+
+    operator Move() const { return move; }
+    void operator=(Move m) { move = m; }
 };
 
 // insertionSort() や std::sort() で必要
@@ -195,5 +199,10 @@ inline Move move16toMove(const Move move, const Position& pos) {
 	const PieceType ptFrom = pieceToPieceType(pos.piece(from));
 	return move | pieceType2Move(ptFrom) | capturedPieceType2Move(move.to(), pos);
 }
+
+#define MOVE_NONE Move::moveNone()
+#define MOVE_NULL Move::moveNull()
+
+
 
 #endif // #ifndef APERY_MOVE_HPP

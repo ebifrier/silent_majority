@@ -145,7 +145,7 @@ namespace {
 	}
 #endif
 
-	bool calcDifference(Position& pos, SearchStack* ss) {
+	bool calcDifference(Position& pos, Search::Stack* ss) {
 #if defined INANIWA_SHIFT
 		if (pos.csearcher()->inaniwaFlag != NotInaniwa) return false;
 #endif
@@ -279,7 +279,7 @@ namespace {
 		return nlist;
 	}
 
-	void evaluateBody(Position& pos, SearchStack* ss) {
+	void evaluateBody(Position& pos, Search::Stack* ss) {
 		if (calcDifference(pos, ss)) {
 			assert([&] {
 					const auto score = ss->staticEvalRaw.sum(pos.turn());
@@ -416,7 +416,7 @@ Score evaluateUnUseDiff(const Position& pos) {
 	return static_cast<Score>(score.sum(pos.turn()));
 }
 
-Score evaluate(Position& pos, SearchStack* ss) {
+Score Search::evaluate(Position& pos, Search::Stack* ss) {
 	if (ss->staticEvalRaw.p[0][0] != ScoreNotEvaluated) {
 		const Score score = static_cast<Score>(ss->staticEvalRaw.sum(pos.turn()));
 		assert(score == evaluateUnUseDiff(pos));

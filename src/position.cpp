@@ -241,7 +241,7 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
 		handKey -= zobHand(hpTo, us);
 		boardKey += zobrist(ptTo, to, us);
 
-		prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+		prefetch(TT.firstEntry(boardKey + handKey));
 
 		const int handnum = hand(us).numOf(hpTo);
 		const int listIndex = evalList_.squareHandToList[HandPieceToSquareHand[us][hpTo] + handnum];
@@ -315,7 +315,7 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
 
 			st_->material += (us == Black ? capturePieceScore(ptCaptured) : -capturePieceScore(ptCaptured));
 		}
-		prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+		prefetch(TT.firstEntry(boardKey + handKey));
 		// Occupied は to, from の位置のビットを操作するよりも、
 		// Black と White の or を取る方が速いはず。
 		byTypeBB_[Occupied] = bbOf(Black) | bbOf(White);
@@ -364,6 +364,7 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
 				default: UNREACHABLE;
 				}
 			}
+
 			st_->continuousCheck[us] += 2;
 		}
 		else {
@@ -463,6 +464,33 @@ void Position::undoMove(const Move move) {
 
 	assert(isOK());
 }
+
+template <bool DO> 
+void Position::doNullMove(StateInfo& backUpSt) {
+	assert(!inCheck());
+
+	StateInfo* src = (DO ? st_ : &backUpSt);
+	StateInfo* dst = (DO ? &backUpSt : st_);
+
+	dst->boardKey      = src->boardKey;
+	dst->handKey       = src->handKey;
+	dst->pliesFromNull = src->pliesFromNull;
+	dst->hand = hand(turn());
+	turn_ = oppositeColor(turn());
+
+	if (DO) {
+		st_->boardKey ^= zobTurn();
+		prefetch(TT.firstEntry(st_->key()));
+		st_->pliesFromNull = 0;
+		st_->continuousCheck[turn()] = 0;
+	}
+	st_->hand = hand(turn());
+
+	assert(isOK());
+}
+
+template void Position::doNullMove<false>(StateInfo& backUpSt);
+template void Position::doNullMove<true>(StateInfo& backUpSt);
 
 namespace {
 	// SEE の順番
@@ -1706,9 +1734,9 @@ void Position::set(const std::string& sfen, Thread* th) {
 	char token;
 	Square sq = SQ91;
 
-	Searcher* s = std::move(searcher_);
+	//Searcher* s = std::move(searcher_);
 	clear();
-	setSearcher(s);
+	//setSearcher(s);
 
 	// 盤上の駒
 	while (ss.get(token) && token != ' ') {
@@ -1875,4 +1903,8 @@ Score Position::computeMaterial() const {
 		s += num * pieceScore(pt);
 	}
 	return s;
+}
+
+Piece Position::moved_piece(const Move m) const {
+    return colorAndPieceTypeToPiece(turn(), m.pieceTypeFromOrDropped());
 }

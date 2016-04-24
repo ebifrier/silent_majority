@@ -331,7 +331,6 @@ void initTable() {
 	initSquareDistance();
 
 	Book::init();
-	initSearchTable();
 }
 
 #if defined FIND_MAGIC
