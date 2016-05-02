@@ -195,6 +195,13 @@ bool Position::moveIsPseudoLegal(const Move move, const bool checkPawnDrop) cons
 					return false;
 			}
 		}
+        /**/
+        if (move.isPromotion()) {
+          //成る手の時、移動する駒の種類が成れる駒でないとダメ
+          if (ptFrom >= Gold && ptFrom <= Dragon) {
+            return false;
+          }
+        }/**/
 	}
 
 	return true;
