@@ -1,0 +1,21 @@
+# Ignore directories
+Debug/
+Release/
+bin/
+obj/
+old/
+ipch/
+log/
+x64/
+
+# Ignore extensitions
+*.sdf
+*.opensdf
+*.userprefs
+*.user
+*.suo
+*.bin
+*.log
+*.o
+*.obj
+src.old/
