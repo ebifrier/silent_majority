@@ -5,7 +5,7 @@
 #include "search.hpp"
 #include "thread.hpp"
 
-#if 1
+#if 0
 using namespace std;
 
 namespace {
@@ -119,7 +119,7 @@ void benchmark(const Position& current, istream& is) {
 }
 #else
 // 今はベンチマークというより、PGO ビルドの自動化の為にある。
-void benchmark(Position& pos) {
+void benchmark(Position& pos, std::istream& is) {
 	std::string token;
 	Search::LimitsType limits;
 

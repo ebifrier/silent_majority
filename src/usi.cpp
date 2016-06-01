@@ -79,7 +79,7 @@ void init(OptionsMap& o) {
 	o["Min_Book_Ply"]                = Option(SHRT_MAX, 0, SHRT_MAX);
 	o["Max_Book_Ply"]                = Option(SHRT_MAX, 0, SHRT_MAX);
 	o["Min_Book_Score"]              = Option(-180, -ScoreInfinite, ScoreInfinite);
-	o["Eval_Dir"]                    = Option("20151105", onEvalDir);
+	o["Eval_Dir"]                    = Option("20160307", onEvalDir);
 	o["Write_Synthesized_Eval"]      = Option(false);
 	o["USI_Ponder"]                  = Option(true);
 	o["Byoyomi_Margin"]              = Option(500, 0, INT_MAX);

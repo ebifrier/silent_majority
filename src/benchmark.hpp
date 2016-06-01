@@ -4,6 +4,6 @@
 #include "common.hpp"
 
 class Position;
-void benchmark(const Position& pos, std::istream& is);
+void benchmark(Position& pos, std::istream& is);
 
 #endif // #ifndef APERY_BENCHMARK_HPP
