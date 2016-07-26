@@ -83,6 +83,7 @@ void init(OptionsMap& o) {
 	o["Write_Synthesized_Eval"]      = Option(false);
 	o["USI_Ponder"]                  = Option(true);
 	o["Byoyomi_Margin"]              = Option(500, 0, INT_MAX);
+    o["Inc_Margin"]                  = Option(4500, 0, INT_MAX);
 	o["MultiPV"]                     = Option(1, 1, MaxLegalMoves);
 	o["Skill_Level"]                 = Option(20, 0, 20);
 	o["Max_Random_Score_Diff"]       = Option(0, 0, ScoreMate0Ply);
@@ -163,12 +164,10 @@ void go(const Position& pos, std::istringstream& ssCmd) {
 		if      (token == "ponder"     ) limits.ponder = true;
 		else if (token == "btime"      ) ssCmd >> limits.time[Black];
 		else if (token == "wtime"      ) ssCmd >> limits.time[White];
+        else if (token == "binc"       ) ssCmd >> limits.inc[Black];
+        else if (token == "winc"       ) ssCmd >> limits.inc[White];
 		else if (token == "infinite"   ) limits.infinite = true;
-		else if (token == "byoyomi" || token == "movetime") {
-			// btime wtime の後に byoyomi が来る前提になっているので良くない。
-			ssCmd >> limits.moveTime;
-			if (limits.moveTime != 0) { limits.moveTime -= Options["Byoyomi_Margin"]; }
-		}
+		else if (token == "byoyomi" || token == "movetime") { ssCmd >> limits.moveTime; }
 		else if (token == "depth"      ) { ssCmd >> limits.depth; }
 		else if (token == "nodes"      ) { ssCmd >> limits.nodes; }
 		else if (token == "searchmoves") {
@@ -176,6 +175,11 @@ void go(const Position& pos, std::istringstream& ssCmd) {
 				moves.push_back(usiToMove(pos, token));
 		}
 	}
+    if (limits.moveTime != 0)
+        limits.moveTime -= Options["Byoyomi_Margin"];
+    else if (limits.inc[pos.turn()] != 0)
+        limits.time[pos.turn()] -= Options["Inc_Margin"];
+
 	Search::SearchMoves = moves;
 	Threads.startThinking(pos, limits, moves);
 }
