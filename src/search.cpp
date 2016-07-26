@@ -1620,15 +1620,15 @@ bool RootMove::extract_ponder_from_tt(Position& pos)
 
     pos.doMove(pv[0], st);
     TTEntry* tte = TT.probe(pos.getKey(), ttHit);
-    pos.undoMove(pv[0]);
 
     if (tte != nullptr)
     {
         Move m = move16toMove(tte->move(), pos); // Local copy to be SMP safe
         if (MoveList<Legal>(pos).contains(m))
-            return pv.push_back(m), true;
+            pv.push_back(m);
     }
 
-    return false;
+    pos.undoMove(pv[0]);
+    return pv.size() > 1;
 }
 
