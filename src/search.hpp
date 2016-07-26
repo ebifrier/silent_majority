@@ -40,7 +40,6 @@ struct RootMove {
 	}
 
     bool extract_ponder_from_tt(Position& pos);
-	void insertPvInTT(Position& pos);
 
 	Score score = -ScoreInfinite;
 	Score previousScore = -ScoreInfinite;

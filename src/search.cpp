@@ -678,11 +678,6 @@ void Thread::search() {
 				// 先頭が最善手になるようにソート
 				insertionSort(rootMoves.begin() + pvIdx, rootMoves.end());
 
-				for (size_t i = 0; i <= pvIdx; ++i) {
-					(ss-1)->staticEvalRaw.p[0][0] = ss->staticEvalRaw.p[0][0] = ScoreNotEvaluated;
-					rootMoves[i].insertPvInTT(rootPos);
-				}
-
 #if 0
 				// 詰みを発見したら即指す。
 				if (ScoreMateInMaxPly <= abs(bestScore) && abs(bestScore) < ScoreInfinite) {
@@ -1588,28 +1583,6 @@ void check_time() {
             Signals.stop = true;
 }
 } // namespace
-
-void RootMove::insertPvInTT(Position& pos) {
-	StateInfo state[MaxPly];
-	StateInfo* st = state;
-    bool ttHit;
-
-    for (Move m : pv) {
-
-        assert(MoveList<Legal>(pos).contains(m));
-
-		TTEntry* tte = TT.probe(pos.getKey(), ttHit);
-
-		if (!ttHit || move16toMove(tte->move(), pos) != m)
-            tte->save(pos.getKey(), ScoreNone, BoundNone, DepthNone, 
-                      m, ScoreNone, TT.generation());
-
-		pos.doMove(m, *st++);
-	}
-
-    for (size_t i = pv.size(); i > 0; )
-		pos.undoMove(pv[--i]);
-}
 
 bool RootMove::extract_ponder_from_tt(Position& pos)
 {
