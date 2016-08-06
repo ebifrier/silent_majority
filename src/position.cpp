@@ -201,6 +201,10 @@ bool Position::moveIsPseudoLegal(const Move move, const bool checkPawnDrop) cons
           if (ptFrom >= Gold && ptFrom <= Dragon) {
             return false;
           }
+          // fromかtoどちらかが成れる位置でないとダメ
+          if (!(canPromote(us, makeRank(from))) && !(canPromote(us, makeRank(to)))) {
+            return false;
+          }
         }/**/
 	}
 
