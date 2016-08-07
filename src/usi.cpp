@@ -405,6 +405,7 @@ void measureGenerateMoves(const Position& pos) {
 #endif
 
 #ifdef NDEBUG
+const std::string MyName = "SILENT_MAJORITY 1.1.02";
 #else
 const std::string MyName = "Apery Debug Build";
 #endif
