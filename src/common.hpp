@@ -352,6 +352,8 @@ typedef unsigned __int64 uint64_t;
 #  include <inttypes.h>
 #endif
 
+#if defined _WIN64 && defined _MSC_VER
+
 inline int lsb(const u64 b) {
   unsigned long idx;
   _BitScanForward64(&idx, b);
@@ -363,5 +365,17 @@ inline int msb(const u64 b) {
   _BitScanReverse64(&idx, b);
   return idx;
 }
+
+#else
+
+inline int lsb(const u64 b) {
+  return firstOneFromLSB(b);
+}
+
+inline int msb(const u64 b) {
+  return 63 - firstOneFromMSB(b);
+}
+
+#endif
 
 #endif // #ifndef APERY_COMMON_HPP

@@ -448,6 +448,7 @@ void MainThread::search() {
 	static Book book;
     Position& pos = rootPos;
     Color us = pos.turn();
+    bool isbook = false;
 	Time.init(Limits, us, pos.gamePly());
 	std::uniform_int_distribution<int> dist(Options["Min_Book_Ply"], Options["Max_Book_Ply"]);
 	const Ply book_ply = dist(g_randomTimeSeed);
@@ -466,7 +467,6 @@ void MainThread::search() {
 	threads[0]->searching = true;
 #else
 
-    bool isbook = false;
 	SYNCCOUT << "info string book_ply " << book_ply << SYNCENDL;
 	if (Options["OwnBook"] && pos.gamePly() <= book_ply) {
 		const std::tuple<Move, Score> bookMoveScore = book.probe(pos, Options["Book_File"], Options["Best_Book_Move"]);
