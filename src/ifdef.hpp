@@ -30,6 +30,7 @@
 // 評価関数の SIMD 化
 #if defined HAVE_AVX2
 #define USE_AVX2_EVAL
+#define HAVE_BMI2
 #elif defined HAVE_SSE4
 #define USE_SSE_EVAL
 #endif
@@ -80,5 +81,19 @@
 // Magic Bitboard で必要となるマジックナンバーを求める。
 #define FIND_MAGIC
 #endif
+
+
+#if 0
+// faillow failhigh を出力する
+#define PVINFOTOUSI_FAILLOW_FAILHIGH
+// hash使用率を表示する(TODO:benchが落ちる)
+#define INFO_HASHFULL
+#endif
+
+//#define RESIGN
+//#define EXCLUDEKEY
+//#define FROMTO
+//#define STEP15_ESCAPE_CAPTURE
+//#define TEMPO
 
 #endif // #ifndef APERY_IFDEF_HPP

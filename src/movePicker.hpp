@@ -5,18 +5,6 @@
 #include "position.hpp"
 #include "search.hpp"
 
-enum GenerateMovePhase {
-	MainSearch, PH_TacticalMoves0, PH_Killers, PH_NonTacticalMoves0, PH_NonTacticalMoves1, PH_BadCaptures,
-	EvasionSearch, PH_Evasions,
-	QSearch, PH_QCaptures0,
-	QEvasionSearch, PH_QEvasions,
-	ProbCut, PH_TacticalMoves1,
-	QRecapture, PH_QCaptures1,
-	PH_Stop
-};
-OverloadEnumOperators(GenerateMovePhase); // ++phase_ の為。
-
-
 template<typename T, bool CM = false>
 struct Stats {
 
@@ -52,9 +40,35 @@ typedef Stats<Score, false> HistoryStats;
 typedef Stats<Score, true> CounterMoveStats;
 typedef Stats<CounterMoveStats> CounterMoveHistoryStats;
 
+#ifdef FROMTO
+struct FromToStats {
+
+  Score get(Color c, Move m) const { return table[c][m.isDrop() ? SquareNum : m.from()][m.to()]; }
+  void clear() { std::memset(table, 0, sizeof(table)); }
+
+  void update(Color c, Move m, Score s)
+  {
+    if (abs(int(s)) >= 324)
+      return;
+
+    Square f = m.isDrop() ? SquareNum : m.from();
+    Square t = m.to();
+
+    table[c][f][t] -= table[c][f][t] * abs(int(s)) / 324;
+    table[c][f][t] += int(s) * 32;
+  }
+
+private:
+  Score table[ColorNum][SquareNum + 1][SquareNum];
+};
+#endif
+
 
 class MovePicker {
 public:
+	MovePicker(const MovePicker&) = delete;
+	MovePicker& operator=(const MovePicker&) = delete;
+
 	MovePicker(const Position&, Move, const Depth, const Square);
 	MovePicker(const Position&, const Move, Score);
     MovePicker(const Position&, const Move, const Depth, Search::Stack*);
@@ -64,25 +78,21 @@ private:
 	void scoreCaptures();
 	template <bool IsDrop> void scoreNonCapturesMinusPro();
 	void scoreEvasions();
-	void goNextPhase();
-
-	MoveStack* firstMove() { return &legalMoves[1]; } // [0] は番兵
+    MoveStack* begin() { return cur; }
+    MoveStack* end() { return endMoves; }
 
 	const Position& pos;
     const Search::Stack* ss;
     Move countermove;
 	Depth depth;
-	Move ttMove; // transposition table move
-	MoveStack killerMoves[3];
+	Move ttMove;
 	Square recaptureSquare;
-	Score threshold; // int で良いのか？
-	GenerateMovePhase phase;
+	Score threshold;
+    int stage;
 	MoveStack* cur;
 	MoveStack* endMoves;
-	MoveStack* lastNonCapture;
 	MoveStack* endBadCaptures;
-	// std::array にした方が良さそう。
-	MoveStack legalMoves[MaxLegalMoves];
+	MoveStack moves[MaxLegalMoves];
 };
 
 #endif // #ifndef APERY_MOVEPICKER_HPP

@@ -5,41 +5,45 @@
 #include "move.hpp"
 
 enum Depth {
-	OnePly                 = 1,
-	Depth0                 = 0,
-	Depth1                 = 1,
-	DepthQChecks           =  0 * OnePly, // -1
-	DepthQNoChecks         = -1 * OnePly, // -2
-	DepthQRecaptures       = -5 * OnePly, // -8
+	OnePly                 =  1,
+	Depth0                 =  0 * OnePly,
+	Depth1                 =  1 * OnePly,
+	DepthQChecks           =  0 * OnePly,
+	DepthQNoChecks         = -1 * OnePly,
+	DepthQRecaptures       = -5 * OnePly,
 	DepthNone              = -6 * OnePly,
-    DepthMax = MaxPly
+    DepthMax = MaxPly * OnePly
 };
 OverloadEnumOperators(Depth);
+
+static_assert(!(OnePly & (OnePly - 1)), "OnePly is not a power of 2");
 
 struct TTEntry {
 
 	Move  move() const       { return static_cast<Move>(move16); }
     Score score() const      { return static_cast<Score>(score16); }
 	Score evalScore() const  { return static_cast<Score>(evalScore16); }
-    Depth depth() const      { return static_cast<Depth>(depth8); }
+    Depth depth() const      { return static_cast<Depth>(depth8 * int(OnePly)); }
     Bound bound() const      { return static_cast<Bound>(genBound8 & 0x3); }
 
 	void save(Key k, Score s, Bound b, Depth d,  Move m, Score es, u8 g)
 	{
+        assert(d / OnePly * OnePly == d);
+
         if (!m.isNone() || (k >> 48) != key16)
             move16 = static_cast<u16>(m.value());
 
         // Don't overwrite more valuable entries
         if ((k >> 48) != key16
-          || d > depth8 - 4
-          /* || g != (genBound8 & 0xFC) // Matching non-zero keys are already refreshed by probe() */
+          || d / OnePly > depth8 - 4
+       /* || g != (genBound8 & 0xFC) // Matching non-zero keys are already refreshed by probe() */
           || b == BoundExact)
         {
             key16       = static_cast<u16>(k >> 48);
             score16     = static_cast<s16>(s);
             evalScore16 = static_cast<s16>(es);
             genBound8   = static_cast<u8>(g | b);
-            depth8      = static_cast<s8>(d);
+            depth8      = static_cast<s8>(d / OnePly);
         }
 	}
 

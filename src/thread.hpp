@@ -33,6 +33,9 @@ public:
     Depth rootDepth;
     HistoryStats history;
     MoveStats counterMoves;
+#ifdef FROMTO
+    FromToStats fromTo;
+#endif
     Depth completedDepth;
     std::atomic_bool resetCalls;
 };

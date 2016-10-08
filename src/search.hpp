@@ -50,8 +50,11 @@ typedef std::vector<RootMove> RootMoves;
 
 // 時間や探索深さの制限を格納する為の構造体
 struct LimitsType {
-	LimitsType() { std::memset(this, 0, sizeof(LimitsType)); }
-	bool useTimeManagement() const { return !(depth | nodes | moveTime | static_cast<int>(infinite)); }
+    LimitsType() {
+      nodes = time[White] = time[Black] = inc[White] = inc[Black] =
+      npmsec = movesToGo = depth = moveTime = mate = infinite = ponder = 0;
+    }
+	bool useTimeManagement() const { return !(mate | depth | nodes | moveTime | static_cast<int>(infinite)); }
 
 	int time[ColorNum];
 	int inc[ColorNum];
@@ -60,6 +63,7 @@ struct LimitsType {
 	Ply depth;
 	s64 nodes;
 	int moveTime;
+    int mate;
 	bool infinite;
 	bool ponder;
     TimePoint startTime;

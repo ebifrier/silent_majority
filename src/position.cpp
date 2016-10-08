@@ -564,7 +564,7 @@ namespace {
 	}
 }
 
-Score Position::see(const Move move, const int asymmThreshold) const {
+Score Position::see(const Move move) const {
 	const Square to = move.to();
 	Square from;
 	PieceType ptCaptured;
@@ -613,19 +613,7 @@ Score Position::see(const Move move, const int asymmThreshold) const {
 		turn = oppositeColor(turn);
 		opponentAttackers = attackers & bbOf(turn);
 
-		if (ptCaptured == King) {
-			if (opponentAttackers.isNot0())
-				swapList[slIndex++] = CaptureKingScore;
-			break;
-		}
-	} while (opponentAttackers.isNot0());
-
-	if (asymmThreshold) {
-		for (int i = 0; i < slIndex; i += 2) {
-			if (swapList[i] < asymmThreshold)
-				swapList[i] = -CaptureKingScore;
-		}
-	}
+	} while (opponentAttackers.isNot0() && (ptCaptured != King || (--slIndex, false)));
 
 	// nega max 的に駒の取り合いの点数を求める。
 	while (--slIndex)
@@ -638,7 +626,7 @@ Score Position::seeSign(const Move move) const {
 		const PieceType ptFrom = move.pieceTypeFrom();
 		const Square to = move.to();
 		if (capturePieceScore(ptFrom) <= capturePieceScore(piece(to)))
-			return static_cast<Score>(1);
+			return ScoreKnownWin;
 	}
 	return see(move);
 }

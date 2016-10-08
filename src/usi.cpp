@@ -93,6 +93,9 @@ void init(OptionsMap& o) {
 	o["Threads"]                     = Option(cpuCoreCount(), 1, 128, onThreads);
     o["Move_Overhead"] = Option(30, 0, 5000);
     o["nodestime"] = Option(0, 0, 10000);
+#ifdef RESIGN
+    o["Resign"] = Option(2000, 0, 10000);
+#endif
 }
 
 Option::Option(const char* v, Fn* f) :
@@ -405,7 +408,7 @@ void measureGenerateMoves(const Position& pos) {
 #endif
 
 #ifdef NDEBUG
-const std::string MyName = "SILENT_MAJORITY 1.1.02";
+const std::string MyName = "SILENT_MAJORITY 1.2";
 #else
 const std::string MyName = "Apery Debug Build";
 #endif
