@@ -905,12 +905,10 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 
 		// step3
 		// mate distance pruning
-		if (!rootNode) {
-			alpha = std::max(matedIn(ss->ply), alpha);
-			beta = std::min(mateIn(ss->ply+1), beta);
-			if (beta <= alpha)
-				return alpha;
-		}
+		alpha = std::max(matedIn(ss->ply), alpha);
+		beta = std::min(mateIn(ss->ply+1), beta);
+		if (beta <= alpha)
+			return alpha;
 	}
 
     ss->currentMove = (ss+1)->excludedMove = bestMove = Move::moveNone();
