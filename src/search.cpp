@@ -588,6 +588,7 @@ void Thread::search() {
     Move easyMove = MOVE_NONE;
     MainThread* mainThread = (this == Threads.main() ? Threads.main() : nullptr);
     int lastInfoTime = -1; // 将棋所のコンソールが詰まる問題への対処用
+	int pv_interval = Options["PvInterval"]; // PVの出力間隔[ms]
 
 	std::memset(ss-5, 0, 8 * sizeof(Stack));
 
@@ -699,7 +700,7 @@ void Thread::search() {
                   && (bestScore <= alpha || bestScore >= beta)
                   && 3000 < Time.elapsed()
 					// 将棋所のコンソールが詰まるのを防ぐ。
-					&& (rootDepth < 4 || lastInfoTime + 200 < Time.elapsed()))
+					&& (rootDepth < 4 || lastInfoTime + pv_interval < Time.elapsed()))
 				{
 					lastInfoTime = Time.elapsed();
 					SYNCCOUT << pvInfoToUSI(rootPos, rootDepth, alpha, beta) << SYNCENDL;
@@ -744,7 +745,7 @@ void Thread::search() {
             else if ((pvIdx + 1 == MultiPV
                 || 3000 < Time.elapsed())
 				// 将棋所のコンソールが詰まるのを防ぐ。
-				&& (rootDepth < 4 || lastInfoTime + 200 < Time.elapsed()))
+				&& (rootDepth < 4 || lastInfoTime + pv_interval < Time.elapsed()))
 			{
 				lastInfoTime = Time.elapsed();
 				SYNCCOUT << pvInfoToUSI(rootPos, rootDepth, alpha, beta) << SYNCENDL;

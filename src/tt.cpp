@@ -3,7 +3,12 @@
 TranspositionTable TT; // Our global transposition table
 
 void TranspositionTable::resize(size_t mbSize) { // Mega Byte 指定
-    size_t newClusterCount = size_t(1) << msb((mbSize * 1024 * 1024) / sizeof(Cluster));
+	// 確保する要素数を取得する。
+	size_t newClusterCount = (mbSize << 20) / sizeof(Cluster);
+	newClusterCount = std::max(static_cast<size_t>(1024), newClusterCount); // 最小値は 1024 としておく。
+	// 確保する要素数は 2 のべき乗である必要があるので、MSB以外を捨てる。
+	const int msbIndex = 63 - firstOneFromMSB(static_cast<u64>(newClusterCount));
+	newClusterCount = UINT64_C(1) << msbIndex;
 
     if (newClusterCount == clusterCount)
       return;
