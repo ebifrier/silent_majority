@@ -351,8 +351,6 @@ void Search::init() {
           for (int mc = 1; mc < 64; ++mc)
           {
               double r = log(d) * log(mc) / 2;
-              if (r < 0.80)
-                continue;
 
               Reductions[NonPV][imp][d][mc] = int(std::round(r));
               Reductions[PV][imp][d][mc] = std::max(Reductions[NonPV][imp][d][mc] - 1, 0);
@@ -991,7 +989,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 		&& eval - futilityMargin(depth) >= beta
 		&& eval < ScoreKnownWin)
 	{
-		return eval - futilityMargin(depth);
+		return eval;
 	}
 
 	// step8
@@ -1185,7 +1183,7 @@ moves_loop:
 			}
 			else if (depth < 7 * OnePly
 					 && !extension
-					 && pos.seeSign(move) < Score(-35 * depth / OnePly * depth / OnePly))
+					 && pos.seeSign(move) < Score(-PawnScore * int(depth / OnePly)))
 				continue;
 		}
 
@@ -1222,7 +1220,7 @@ moves_loop:
 #ifdef STEP15_ESCAPE_CAPTURE
 				// Decrease reduction for moves that escape a capture
 				else if (!move.isDrop()//type_of(move) == NORMAL
-						 && pieceToPieceType(pos.piece(move.to())) != Pawn //type_of(pos.piece(move.to())) != Pawn
+						 //&& pieceToPieceType(pos.piece(move.to())) != Pawn //type_of(pos.piece(move.to())) != Pawn
 						 && move.isPromotion()
 						 && pos.see(makeMove(move.pieceTypeFrom(), move.to(), move.from()), 0) < ScoreZero)
 					r -= 2 * OnePly;
@@ -1305,11 +1303,6 @@ moves_loop:
 			bestScore = score;
 
 			if (score > alpha) {
-				if (PvNode
-					&& thisThread == Threads.main()
-					&& EasyMove.get(pos.getKey())
-					&& (move != EasyMove.get(pos.getKey()) || moveCount > 1))
-					EasyMove.clear();
 
 				bestMove = move;
 
