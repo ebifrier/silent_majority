@@ -98,7 +98,7 @@
 #define Handle_Windows_Processors_Groups
 #endif
 
-#define RESIGN
+//#define RESIGN
 //#define EXCLUDEKEY
 //#define FROMTO
 //#define STEP15_ESCAPE_CAPTURE

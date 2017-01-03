@@ -111,9 +111,9 @@ void ThreadPool::readUSIOptions() {
 	}
 }
 
-int64_t ThreadPool::nodes_searched() {
+uint64_t ThreadPool::nodes_searched() {
 
-  int64_t nodes = 0;
+  uint64_t nodes = 0;
   for (Thread* th : *this)
       nodes += th->rootPos.nodesSearched();
   return nodes;
@@ -152,7 +152,7 @@ void ThreadPool::startThinking(const Position& pos, const Search::LimitsType& li
 	Search::think();
 #else
 
-    main()->start_searching();
+	main()->start_searching();
 #endif
 }
 

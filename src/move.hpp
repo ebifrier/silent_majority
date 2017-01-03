@@ -16,6 +16,11 @@
 //       from, to , promo だけだったら、16bit で済む。
 class Move {
 public:
+	static const u32 PromoteFlag = 1 << 14;
+	static const u32 MoveNone    = 0;
+	static const u32 MoveNull    = 129;
+	static const u32 MovePVsEnd  = 1 << 15; // for learn
+
 	Move() {}
 	explicit Move(const u32 u) : value_(u) {}
 	Move& operator = (const Move& m) { value_ = m.value_; return *this; }
@@ -66,7 +71,6 @@ public:
 	}
 	// 値が入っているか。
 	bool isNone() const { return (value() == MoveNone); }
-    bool is_ok() const { return to() != from(); }
 	// メンバ変数 value_ の取得
 	u32 value() const { return value_; }
 	Move operator |= (const Move rhs) {
@@ -77,6 +81,10 @@ public:
 	bool operator == (const Move rhs) const { return this->value() == rhs.value(); }
 	bool operator != (const Move rhs) const { return !(*this == rhs); }
 	bool operator < (const Move rhs) const { return this->value() < rhs.value(); } // for learn
+    bool isOK() const {
+        static_assert(MoveNull == 129, "");
+        return to() != from(); // catch MoveNull and MoveNone
+    }
 	std::string promoteFlagToStringUSI() const { return (this->isPromotion() ? "+" : ""); }
 	std::string toUSI() const;
 	std::string toCSA() const;
@@ -87,11 +95,6 @@ public:
 	// 格納するその他のPVの最後に MovePVsEnd を格納する。それをフラグに次の指し手に遷移する。
 	// 正解のPV, MoveNone, その他0のPV, MoveNone, その他1のPV, MoveNone, MovePVsEnd という感じに並ぶ。
 	static Move movePVsEnd() { return Move(MovePVsEnd); }
-
-	static const u32 PromoteFlag = 1 << 14;
-	static const u32 MoveNone    = 0;
-	static const u32 MoveNull    = 129;
-	static const u32 MovePVsEnd  = 1 << 15; // for learn
 
 private:
 	u32 value_;

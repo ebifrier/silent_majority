@@ -13,13 +13,6 @@ struct Stats {
   const T* operator[](Piece pc) const { return table[pc]; }
   T* operator[](Piece pc) { return table[pc]; }
   void clear() { std::memset(table, 0, sizeof(table)); }
-
-  Score value(const bool isDrop, const Piece pc, const Square to) const {
-    assert(0 < pc && pc < PieceNone);
-    assert(isInSquare(to));
-    return table[pc][to];
-  }
-
   void update(Piece pc, Square to, Move m) { table[pc][to] = m; }
 
   void update(Piece pc, Square to, Score v) {

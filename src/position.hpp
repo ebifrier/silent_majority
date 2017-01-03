@@ -152,6 +152,7 @@ public:
 
 	bool moveGivesCheck(const Move m) const;
 	bool moveGivesCheck(const Move move, const CheckInfo& ci) const;
+	Piece movedPiece(const Move m) const;
 
 	// attacks
 	Bitboard attackersTo(const Square sq, const Bitboard& occupied) const;
@@ -271,7 +272,7 @@ public:
 		assert(pt < Gold);
 		return PromotePieceScore[pt];
 	}
-    Piece moved_piece(const Move m) const;
+
 private:
 	void clear();
 	void setPiece(const Piece piece, const Square sq) {

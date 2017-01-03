@@ -3,9 +3,7 @@
 
 #include "move.hpp"
 #include "pieceScore.hpp"
-//#include "timeManager.hpp"
 #include "tt.hpp"
-//#include "thread.hpp"
 #include "evaluate.hpp"
 
 template<typename T, bool CM> struct Stats;
@@ -32,13 +30,8 @@ struct RootMove {
 
     explicit RootMove(Move m) : pv(1, m) {}
 
-	bool operator < (const RootMove& m) const {
-		return score < m.score;
-	}
-	bool operator == (const Move& m) const {
-		return pv[0] == m;
-	}
-
+	bool operator < (const RootMove& m) const { return m.score < score; }
+	bool operator == (const Move& m) const { return pv[0] == m; }
     bool extract_ponder_from_tt(Position& pos);
 
 	Score score = -ScoreInfinite;
@@ -54,18 +47,14 @@ struct LimitsType {
       nodes = time[White] = time[Black] = inc[White] = inc[Black] =
       npmsec = movesToGo = depth = moveTime = mate = infinite = ponder = 0;
     }
-	bool useTimeManagement() const { return !(mate | depth | nodes | moveTime | static_cast<int>(infinite)); }
 
-	int time[ColorNum];
-	int inc[ColorNum];
-    int npmsec;
-	int movesToGo;
-	Ply depth;
+	bool useTimeManagement() const { 
+		return !(mate | depth | nodes | moveTime | infinite); 
+	}
+
+	std::vector<Move> searchmoves;
+	int time[ColorNum], inc[ColorNum], npmsec, movesToGo, depth, moveTime, mate, infinite, ponder;
 	s64 nodes;
-	int moveTime;
-    int mate;
-	bool infinite;
-	bool ponder;
     TimePoint startTime;
 };
 

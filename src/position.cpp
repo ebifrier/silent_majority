@@ -1840,6 +1840,10 @@ bool Position::moveGivesCheck(const Move move, const CheckInfo& ci) const {
 	return false;
 }
 
+Piece Position::movedPiece(const Move m) const {
+	return colorAndPieceTypeToPiece(turn(), m.pieceTypeFromOrDropped());
+}
+
 void Position::clear() {
 	memset(this, 0, sizeof(Position));
 	st_ = &startState_;
@@ -1902,8 +1906,4 @@ Score Position::computeMaterial() const {
 		s += num * pieceScore(pt);
 	}
 	return s;
-}
-
-Piece Position::moved_piece(const Move m) const {
-    return colorAndPieceTypeToPiece(turn(), m.pieceTypeFromOrDropped());
 }

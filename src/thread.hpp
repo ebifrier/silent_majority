@@ -56,7 +56,7 @@ struct ThreadPool : public std::vector<Thread*> {
 	MainThread* main() { return static_cast<MainThread*>(at(0)); }
 	void startThinking(const Position& pos, const Search::LimitsType& limits, const std::vector<Move>& searchMoves);
     void readUSIOptions();
-    int64_t nodes_searched();
+    uint64_t nodes_searched();
 };
 
 extern ThreadPool Threads;
