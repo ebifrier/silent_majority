@@ -30,7 +30,7 @@ struct TTEntry {
 	{
         assert(d / OnePly * OnePly == d);
 
-        if (!m.isNone() || (k >> 48) != key16)
+        if (m || (k >> 48) != key16)
             move16 = static_cast<u16>(m.value());
 
         // Don't overwrite more valuable entries

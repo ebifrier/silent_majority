@@ -45,7 +45,7 @@ namespace {
 		Skill(int l) : level(l) {}
 		bool enabled() const { return level < 20; }
 		bool time_to_pick(Depth depth) const { return depth / OnePly == 1 + level; }
-		Move best_move(size_t multiPV) { return !best.isNone() ? best : pick_best(multiPV); }
+		Move best_move(size_t multiPV) { return best ? best : pick_best(multiPV); }
 		Move pick_best(size_t multiPV);
 
 		int level;
@@ -396,7 +396,7 @@ bool nyugyoku(const Position& pos) {
 	const Bitboard opponentsField = (us == Black ? inFrontMask<Black, Rank4>() : inFrontMask<White, Rank6>());
 
 	// 二 宣言側の玉が敵陣三段目以内に入っている。
-	if (!pos.bbOf(King, us).andIsNot0(opponentsField))
+	if (!pos.bbOf(King, us).andIsAny(opponentsField))
 		return false;
 
 	// 三 宣言側が、大駒5点小駒1点で計算して
@@ -476,7 +476,7 @@ void MainThread::search() {
 	SYNCCOUT << "info string book_ply " << book_ply << SYNCENDL;
 	if (Options["OwnBook"] && pos.gamePly() <= book_ply) {
 		const std::tuple<Move, Score> bookMoveScore = book.probe(pos, Options["Book_File"], Options["Best_Book_Move"]);
-		if (!std::get<0>(bookMoveScore).isNone() && std::find(rootMoves.begin(),
+		if (std::get<0>(bookMoveScore) && std::find(rootMoves.begin(),
 															  rootMoves.end(),
 															  std::get<0>(bookMoveScore)) != rootMoves.end())
 		{
@@ -576,7 +576,7 @@ finalize:
 #endif
     if (nyugyokuWin)
         SYNCCOUT << "bestmove win" << SYNCENDL;
-    else if (bestThread->rootMoves[0].pv[0].isNone())
+    else if (!bestThread->rootMoves[0].pv[0])
         SYNCCOUT << "bestmove resign" << SYNCENDL;
     else {
         SYNCCOUT << "bestmove " << bestThread->rootMoves[0].pv[0].toUSI();
@@ -897,7 +897,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 #ifndef EXCLUDEKEY
 	posKey = pos.getKey() ^ Key(excludedMove.value() << 1);
 #else
-	posKey = (excludedMove.isNone() ? pos.getKey() : pos.getExclusionKey());
+	posKey = (!excludedMove ? pos.getKey() : pos.getExclusionKey());
 #endif
 	tte = TT.probe(posKey, ttHit);
     ttScore = (ttHit ? scoreFromTT(tte->score(), ss->ply) : ScoreNone);
@@ -914,7 +914,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 	{
 		ss->currentMove = ttMove; // Move::moveNone() もありえる。
 
-		if (beta <= ttScore && !ttMove.isNone()) 
+		if (beta <= ttScore && ttMove) 
         {
             int d = depth / OnePly;
 
@@ -939,7 +939,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 	if (!rootNode
 		&& !inCheck)
 	{
-		if (!(move = pos.mateMoveIn1Ply()).isNone()) {
+		if (move = pos.mateMoveIn1Ply()) {
 			ss->staticEval = bestScore = mateIn(ss->ply);
 			tte->save(posKey, scoreToTT(bestScore, ss->ply), BoundExact, depth,
 					  move, ss->staticEval, TT.generation());
@@ -978,7 +978,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 	// razoring
 	if (!PvNode
 		&& depth < 4 * OnePly
-		&& ttMove.isNone()
+		&& ttMove == MOVE_NONE
 		&& eval + razor_margin[depth / OnePly] <= alpha)
 	{
 		if (depth <= OnePly)
@@ -1052,12 +1052,12 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
         const Score threshold = rbeta - ss->staticEval;
 
 		assert(rdepth >= OnePly);
-		assert(!(ss-1)->currentMove.isNone());
+		assert((ss-1)->currentMove);
 		assert((ss-1)->currentMove != Move::moveNull());
 
 		MovePicker mp(pos, ttMove, threshold);
 		const CheckInfo ci(pos);
-		while (!(move = mp.nextMove()).isNone()) {
+		while ((move = mp.nextMove()) != MOVE_NONE) {
 			if (pos.pseudoLegalMoveIsLegal<false, false>(move, ci.pinned)) {
 				ss->currentMove = move;
                 ss->counterMoves = &CounterMoveHistory[pos.movedPiece(move)][move.to()];
@@ -1074,7 +1074,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 	// step10
 	// internal iterative deepening
 	if (depth >= 6 * OnePly
-		&& ttMove.isNone()
+		&& !ttMove
 		&& (PvNode || (ss->staticEval + 256 >= beta)))
 	{
         Depth d = (3 * depth / (4 * OnePly) - 2) * OnePly;
@@ -1101,15 +1101,15 @@ moves_loop:
 
 	singularExtensionNode = (!rootNode
 							 && depth >= 8 * OnePly
-							 && !ttMove.isNone()
+							 && ttMove != MOVE_NONE
 							 && ttScore != ScoreNone
-							 && excludedMove.isNone()
+							 && !excludedMove
 							 && (tte->bound() & BoundLower)
 							 && tte->depth() >= depth - 3 * OnePly);
 
 	// step11
 	// Loop through moves
-	while (!(move = mp.nextMove()).isNone()) {
+	while ((move = mp.nextMove()) != MOVE_NONE) {
 		if (move == excludedMove)
 			continue;
 
@@ -1322,7 +1322,7 @@ moves_loop:
 			if (score > alpha) {
 				if (PvNode
 					&& thisThread == Threads.main()
-					&& !EasyMove.get(pos.getKey()).isNone()
+					&& EasyMove.get(pos.getKey())
 					&& (move != EasyMove.get(pos.getKey()) || moveCount > 1))
 					EasyMove.clear();
 
@@ -1347,9 +1347,9 @@ moves_loop:
 
 	// step20
 	if (moveCount == 0)
-		bestScore = !excludedMove.isNone() ? alpha : matedIn(ss->ply);
+		bestScore = excludedMove ? alpha : matedIn(ss->ply);
 
-    else if (!bestMove.isNone())
+    else if (bestMove)
     {
         int d = depth / OnePly;
 
@@ -1379,10 +1379,10 @@ moves_loop:
 		update_cm_stats(ss-1, pos.piece(prevSq), prevSq, bonus);
 	}
 
-    tte->save(posKey, scoreToTT(bestScore, ss->ply),
-      bestScore >= beta ? BoundLower :
-      ((PvNode && !bestMove.isNone()) ? BoundExact : BoundUpper),
-      depth, bestMove, ss->staticEval, TT.generation());
+	tte->save(posKey, scoreToTT(bestScore, ss->ply),
+			  bestScore >= beta ? BoundLower :
+			  ((PvNode && bestMove) ? BoundExact : BoundUpper),
+			  depth, bestMove, ss->staticEval, TT.generation());
 
 	assert(-ScoreInfinite < bestScore && bestScore < ScoreInfinite);
 
@@ -1450,7 +1450,7 @@ Score qsearch(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dep
 		bestScore = futilityBase = -ScoreInfinite;
 	}
 	else {
-		if (!(move = pos.mateMoveIn1Ply()).isNone())
+		if (move = pos.mateMoveIn1Ply())
 			return mateIn(ss->ply);
 
 		if (ttHit) {
@@ -1488,7 +1488,7 @@ Score qsearch(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dep
 	MovePicker mp(pos, ttMove, depth, (ss-1)->currentMove.to());
 	const CheckInfo ci(pos);
 
-    while (!(move = mp.nextMove()).isNone())
+    while ((move = mp.nextMove()) != MOVE_NONE)
 	{
 		assert(pos.isOK());
 

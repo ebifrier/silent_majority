@@ -18,9 +18,9 @@ enum Stages {
 	QSEARCH_RECAPTURES, QRECAPTURES
 };
 
-  void insertion_sort(MoveStack* begin, MoveStack* end)
+  void insertion_sort(ExtMove* begin, ExtMove* end)
   {
-    MoveStack tmp, *p, *q;
+    ExtMove tmp, *p, *q;
 
     for (p = begin + 1; p < end; ++p)
     {
@@ -31,7 +31,7 @@ enum Stages {
     }
   }
 
-  MoveStack pick_best(MoveStack* begin, MoveStack* end)
+  Move pick_best(ExtMove* begin, ExtMove* end)
   {
       std::swap(*begin, *std::max_element(begin, end));
       return *begin;
@@ -48,8 +48,8 @@ MovePicker::MovePicker(const Position& p, const Move ttm, const Depth d, Search:
     countermove = pos.thisThread()->counterMoves[pos.piece(prevSq)][prevSq];
 
     stage = (pos.inCheck() ? EVASION : MAIN_SEARCH);
-	ttMove = (!ttm.isNone() && pos.moveIsPseudoLegal(ttm) ? ttm : Move::moveNone());
-	stage += ttMove.isNone();
+	ttMove = (ttm && pos.moveIsPseudoLegal(ttm) ? ttm : Move::moveNone());
+	stage += (ttMove == MOVE_NONE);
 }
 
 // 静止探索で呼ばれる。
@@ -73,8 +73,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, const Depth d, const Square 
 		return;
 	}
 
-	ttMove = (!ttm.isNone() && pos.moveIsPseudoLegal(ttm) ? ttm : Move::moveNone());
-    stage += ttMove.isNone();
+	ttMove = (ttm && pos.moveIsPseudoLegal(ttm) ? ttm : Move::moveNone());
+    stage += (ttMove == MOVE_NONE);
 }
 
 MovePicker::MovePicker(const Position& p, const Move ttm, Score th)
@@ -84,12 +84,12 @@ MovePicker::MovePicker(const Position& p, const Move ttm, Score th)
 
 	stage = PROBCUT;
 
-	ttMove = (!ttm.isNone()
+	ttMove = (ttm
 			  && pos.moveIsPseudoLegal(ttm)
-		&& ttm.isCapture()
+			  && ttm.isCapture()
 			  && pos.see(ttm) > threshold ? ttm : MOVE_NONE);
 
-	stage += ttMove.isNone();
+	stage += (ttMove == MOVE_NONE);
 }
 
 void MovePicker::scoreCaptures() {
@@ -179,7 +179,7 @@ Move MovePicker::nextMove() {
 		++stage;
 
 		move = ss->killers[0];  // First killer move
-		if (!move.isNone()
+		if (move != MOVE_NONE
 			&& move != ttMove
 			&& pos.moveIsPseudoLegal(move, true)
 			&& pos.piece(move.to()) == Empty)
@@ -188,7 +188,7 @@ Move MovePicker::nextMove() {
 	case KILLERS:
 		++stage;
 		move = ss->killers[1]; // Second killer move
-		if (!move.isNone()
+		if (move != MOVE_NONE
 			&& move != ttMove
 			&& pos.moveIsPseudoLegal(move, true)
 			&& pos.piece(move.to()) == Empty)
@@ -215,7 +215,7 @@ Move MovePicker::nextMove() {
 		cur = endBadCaptures;
 		if (depth < 3 * OnePly)
 		{
-			MoveStack* goodQuiet = std::partition(cur, endMoves, [](const MoveStack& m)
+			ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
 			                                      { return m.score > ScoreZero; });
 			insertion_sort(cur, goodQuiet);
 		}

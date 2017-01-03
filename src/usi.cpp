@@ -337,7 +337,7 @@ void setPosition(Position& pos, std::istringstream& ssCmd) {
 	Ply currentPly = pos.gamePly();
 	while (ssCmd >> token) {
 		const Move move = usiToMove(pos, token);
-		if (move.isNone()) break;
+		if (!move) break;
 		Search::SetUpStates->push(StateInfo());
 		pos.doMove(move, Search::SetUpStates->top());
 		++currentPly;
@@ -378,9 +378,9 @@ void setOption(std::istringstream& ssCmd) {
 void measureGenerateMoves(const Position& pos) {
 	pos.print();
 
-	MoveStack legalMoves[MaxLegalMoves];
+	ExtMove legalMoves[MaxLegalMoves];
 	for (int i = 0; i < MaxLegalMoves; ++i) legalMoves[i].move = moveNone();
-	MoveStack* pms = &legalMoves[0];
+	ExtMove* pms = &legalMoves[0];
 	const u64 num = 5000000;
     Timer t = Timer::currentTime();
 	if (pos.inCheck()) {

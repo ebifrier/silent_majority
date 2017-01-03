@@ -71,8 +71,8 @@ private:
 	void scoreCaptures();
 	template <bool IsDrop> void scoreNonCapturesMinusPro();
 	void scoreEvasions();
-    MoveStack* begin() { return cur; }
-    MoveStack* end() { return endMoves; }
+    ExtMove* begin() { return cur; }
+    ExtMove* end() { return endMoves; }
 
 	const Position& pos;
     const Search::Stack* ss;
@@ -82,10 +82,10 @@ private:
 	Square recaptureSquare;
 	Score threshold;
     int stage;
-	MoveStack* cur;
-	MoveStack* endMoves;
-	MoveStack* endBadCaptures;
-	MoveStack moves[MaxLegalMoves];
+	ExtMove* cur;
+	ExtMove* endMoves;
+	ExtMove* endBadCaptures;
+	ExtMove moves[MaxLegalMoves];
 };
 
 #endif // #ifndef APERY_MOVEPICKER_HPP
