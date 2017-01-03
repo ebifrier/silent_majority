@@ -231,6 +231,7 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
 	assert(move);
 	assert(&newSt != st_);
 
+	nodes_++;
 	Key boardKey = getBoardKey();
 	Key handKey = getHandKey();
 	boardKey ^= zobTurn();
