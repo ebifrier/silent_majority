@@ -100,7 +100,6 @@
 
 //#define RESIGN
 //#define EXCLUDEKEY
-//#define FROMTO
 //#define STEP15_ESCAPE_CAPTURE
 #define TEMPO
 

@@ -31,13 +31,12 @@ public:
     Position rootPos;
     Search::RootMoves rootMoves;
     Depth rootDepth;
-    HistoryStats history;
-    MoveStats counterMoves;
-#ifdef FROMTO
-    FromToStats fromTo;
-#endif
     Depth completedDepth;
     std::atomic_bool resetCalls;
+	HistoryStats history;
+	MoveStats counterMoves;
+	CounterMoveHistoryStats counterMoveHistory;
+	FromToStats fromTo;
 };
 
 struct MainThread : public Thread {

@@ -86,7 +86,7 @@ MovePicker::MovePicker(const Position& p, const Move ttm, Score th)
 
 	ttMove = (ttm
 			  && pos.moveIsPseudoLegal(ttm)
-			  && ttm.isCapture()
+			  && ttm.isCaptureOrPawnPromotion()
 			  && pos.see(ttm) > threshold ? ttm : MOVE_NONE);
 
 	stage += (ttMove == MOVE_NONE);
@@ -101,10 +101,8 @@ void MovePicker::scoreCaptures() {
 
 template <bool IsDrop> void MovePicker::scoreNonCapturesMinusPro() {
 	const HistoryStats& history = pos.thisThread()->history;
-#ifdef FROMTO
 	const FromToStats& fromTo = pos.thisThread()->fromTo;
 	Color c = pos.turn();
-#endif
 
 	const CounterMoveStats* cmh = (ss-1)->counterMoves;
 	const CounterMoveStats* fmh = (ss-2)->counterMoves;
@@ -117,19 +115,16 @@ template <bool IsDrop> void MovePicker::scoreNonCapturesMinusPro() {
 			+ (cmh  ?  (*cmh)[pos.movedPiece(move)][move.to()] : ScoreZero)
 			+ (fmh  ?  (*fmh)[pos.movedPiece(move)][move.to()] : ScoreZero)
 			+ (fmh2 ? (*fmh2)[pos.movedPiece(move)][move.to()] : ScoreZero)
-#ifdef FROMTO
-			+ fromTo.get(c, m)
-#endif
+			+ fromTo.get(c, move)
 			;
 	}
 }
 
 void MovePicker::scoreEvasions() {
 	const HistoryStats& history = pos.thisThread()->history;
-#ifdef FROMTO
 	const FromToStats& fromTo = pos.thisThread()->fromTo;
 	Color c = pos.turn();
-#endif
+
 	for (auto& m : *this) {
 		const Move move = m;
 
@@ -141,9 +136,7 @@ void MovePicker::scoreEvasions() {
 		}
 		else
 			m.score = history[pos.movedPiece(move)][move.to()]
-#ifdef FROMTO
 			+ fromTo.get(c, move)
-#endif
 			;
 	}
 }

@@ -33,10 +33,10 @@ typedef Stats<Score, false> HistoryStats;
 typedef Stats<Score, true> CounterMoveStats;
 typedef Stats<CounterMoveStats> CounterMoveHistoryStats;
 
-#ifdef FROMTO
+
 struct FromToStats {
 
-  Score get(Color c, Move m) const { return table[c][m.isDrop() ? SquareNum : m.from()][m.to()]; }
+  Score get(Color c, Move m) const { return table[c][m.from()][m.to()]; }
   void clear() { std::memset(table, 0, sizeof(table)); }
 
   void update(Color c, Move m, Score s)
@@ -44,7 +44,7 @@ struct FromToStats {
     if (abs(int(s)) >= 324)
       return;
 
-    Square f = m.isDrop() ? SquareNum : m.from();
+    Square f = m.from();
     Square t = m.to();
 
     table[c][f][t] -= table[c][f][t] * abs(int(s)) / 324;
@@ -52,9 +52,8 @@ struct FromToStats {
   }
 
 private:
-  Score table[ColorNum][SquareNum + 1][SquareNum];
+  Score table[ColorNum][SquareNum + PieceTypeNum][SquareNum];
 };
-#endif
 
 
 class MovePicker {

@@ -121,7 +121,6 @@ namespace {
 
     EasyMoveManager EasyMove;
 	Score DrawScore[ColorNum];
-    CounterMoveHistoryStats CounterMoveHistory;
 
     template <NodeType NT>
     Score search(Position& pos, Search::Stack* ss, Score alpha, Score beta, const Depth depth, const bool cutNode, bool skipEarlyPruning);
@@ -210,10 +209,8 @@ namespace {
 
 		Thread* thisThread = pos.thisThread();
 		thisThread->history.update(pos.movedPiece(move), move.to(), bonus);
-#ifdef FROMTO
 		Color c = pos.turn();
 		thisThread->fromTo.update(c, move, bonus);
-#endif
 		update_cm_stats(ss, pos.movedPiece(move), move.to(), bonus);
 
 		if ((ss-1)->counterMoves)
@@ -225,9 +222,7 @@ namespace {
 		// Decrease all the other played quiet moves
 		for (int i = 0; i < quietsCnt; ++i)
 		{
-#ifdef FROMTO
 			thisThread->fromTo.update(c, quiets[i], -bonus);
-#endif
 			thisThread->history.update(pos.movedPiece(quiets[i]), quiets[i].to(), -bonus);
 			update_cm_stats(ss, pos.movedPiece(quiets[i]), quiets[i].to(), -bonus);
 		}
@@ -370,15 +365,13 @@ void Search::init() {
 void Search::clear() {
 
 	TT.clear();
-	CounterMoveHistory.clear();
 
 	for (Thread* th : Threads)
 	{
 		th->history.clear();
 		th->counterMoves.clear();
-#ifdef FROMTO
 		th->fromTo.clear();
-#endif
+		th->counterMoveHistory.clear();
 		th->resetCalls = true;
 	}
 
@@ -445,7 +438,6 @@ void MainThread::search() {
 	Time.init(Limits, us, pos.gamePly());
 	std::uniform_int_distribution<int> dist(Options["Min_Book_Ply"], Options["Max_Book_Ply"]);
 	const Ply book_ply = dist(g_randomTimeSeed);
-
 	bool nyugyokuWin = false;
 
 	int contempt = Options["Contempt"] * PawnScore / 100; // From centipawns
@@ -559,10 +551,14 @@ finalize:
 		&& !Skill(Options["Skill_Level"]).enabled()
 		&& rootMoves[0].pv[0] != MOVE_NONE)
 	{
-		for (Thread* th : Threads)
-			if (th->completedDepth > bestThread->completedDepth
-				&& th->rootMoves[0].score > bestThread->rootMoves[0].score)
+		for (Thread* th : Threads) {
+			Depth depthDiff = th->completedDepth - bestThread->completedDepth;
+			Score scoreDiff = th->rootMoves[0].score - bestThread->rootMoves[0].score;
+
+			if ((depthDiff > 0 && scoreDiff >= 0)
+				|| (scoreDiff > 0 && depthDiff >= 0))
 				bestThread = th;
+		}
 	}
 
     previousScore = bestThread->rootMoves[0].score;
@@ -846,6 +842,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
     Thread* thisThread = pos.thisThread();
     inCheck = pos.inCheck();
     moveCount = quietCount = ss->moveCount = 0;
+	ss->history = ScoreZero;
     bestScore = -ScoreInfinite;
     ss->ply = (ss-1)->ply + 1;
 
@@ -921,7 +918,8 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
                 update_stats(pos, ss, ttMove, nullptr, 0, bonus(depth));
 
             // Extra penalty for a quiet TT move in previous ply when it gets refuted
-            if ((ss-1)->moveCount == 1 && !(ss-1)->currentMove.isCapture())
+            if ((ss-1)->moveCount == 1 
+				&& !(ss-1)->currentMove.isCaptureOrPawnPromotion())
                 update_cm_stats(ss-1, pos.piece(prevSq), prevSq, penalty(depth));
         }
 		return ttScore;
@@ -1046,7 +1044,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 		while ((move = mp.nextMove()) != MOVE_NONE) {
 			if (pos.pseudoLegalMoveIsLegal<false, false>(move, ci.pinned)) {
 				ss->currentMove = move;
-                ss->counterMoves = &CounterMoveHistory[pos.movedPiece(move)][move.to()];
+                ss->counterMoves = &thisThread->counterMoveHistory[pos.movedPiece(move)][move.to()];
 				pos.doMove(move, st, ci, pos.moveGivesCheck(move, ci));
 				(ss+1)->staticEvalRaw.p[0][0] = ScoreNotEvaluated;
 				score = -search<NonPV>(pos, ss+1, -rbeta, -rbeta+1, rdepth, !cutNode, false);
@@ -1195,7 +1193,7 @@ moves_loop:
 		}
 
 		ss->currentMove = move;
-        ss->counterMoves = &CounterMoveHistory[movedPiece][move.to()];
+        ss->counterMoves = &thisThread->counterMoveHistory[movedPiece][move.to()];
 
 		// step14
 		pos.doMove(move, st, ci, givesCheck);
@@ -1225,18 +1223,23 @@ moves_loop:
 						 && pos.see(makeMove(move.pieceTypeFrom(), move.to(), move.from()), 0) < ScoreZero)
 					r -= 2 * OnePly;
 #endif
-				// Decrease/increase reduction for moves with a good/bad history
-				Score s = thisThread->history[movedPiece][move.to()]
+
+				ss->history = thisThread->history[movedPiece][move.to()]
 					+ (cmh  ? ( *cmh)[movedPiece][move.to()] : ScoreZero)
 					+ (fmh  ? ( *fmh)[movedPiece][move.to()] : ScoreZero)
 					+ (fmh2 ? (*fmh2)[movedPiece][move.to()] : ScoreZero)
-#ifdef FROMTO
 					+ thisThread->fromTo.get(~pos.turn(), move)
-#endif
-					;
+					- 8000; // Correction factor
 
-				int rHist = (s - 8000) / 20000;
-				r = std::max(Depth0, (r / OnePly - rHist) * OnePly);
+				// Decrease/increase reduction by comparing opponent's stat score
+				if (ss->history > ScoreZero && (ss-1)->history < ScoreZero)
+					 r -= OnePly;
+				
+				else if (ss->history < ScoreZero && (ss-1)->history > ScoreZero)
+					 r += OnePly;
+
+				// Decrease/increase reduction for moves with a good/bad history
+				r = std::max(Depth0, (r / OnePly - ss->history / 20000) * OnePly);
 			}
 			const Depth d = std::max(newDepth - r, OnePly);
 
@@ -1335,17 +1338,17 @@ moves_loop:
 
         // Extra penalty for a quiet TT move in previous ply when it gets refuted
         if ((ss-1)->moveCount == 1 
-			&& !bestMove.isCapture())
+			&& !(ss-1)->currentMove.isCaptureOrPawnPromotion())
             update_cm_stats(ss-1, pos.piece(prevSq), prevSq, penalty(depth));
     }
 	else if (depth >= 3 * OnePly
-			 && !move.isCapture()
+			 && !(ss-1)->currentMove.isCaptureOrPawnPromotion()
 			 && (ss-1)->currentMove.isOK())
 		update_cm_stats(ss-1, pos.piece(prevSq), prevSq, bonus(depth));
 
 	tte->save(posKey, scoreToTT(bestScore, ss->ply),
-			  bestScore >= beta ? BoundLower :
-			  ((PvNode && bestMove) ? BoundExact : BoundUpper),
+			  (bestScore >= beta ? BoundLower :
+			  ((PvNode && bestMove) ? BoundExact : BoundUpper)),
 			  depth, bestMove, ss->staticEval, TT.generation());
 
 	assert(-ScoreInfinite < bestScore && bestScore < ScoreInfinite);
