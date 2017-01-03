@@ -41,6 +41,17 @@ namespace {
 		return static_cast<Depth>(Reductions[PVNode][i][std::min(int(depth / OnePly), 63)][std::min(mn, 63)] * OnePly);
 	}
 
+	struct Skill {
+		Skill(int l) : level(l) {}
+		bool enabled() const { return level < 20; }
+		bool time_to_pick(Depth depth) const { return depth / OnePly == 1 + level; }
+		Move best_move(size_t multiPV) { return !best.isNone() ? best : pick_best(multiPV); }
+		Move pick_best(size_t multiPV);
+
+		int level;
+		Move best = MOVE_NONE;
+	};
+
     struct EasyMoveManager {
 
       void clear() {
@@ -105,8 +116,8 @@ namespace {
 
     const size_t HalfDensitySize = std::extent<decltype(HalfDensity)>::value;
 
-    size_t MultiPV;
     EasyMoveManager EasyMove;
+	Score DrawScore[ColorNum];
     CounterMoveHistoryStats CounterMoveHistory;
 
     template <NodeType NT>
@@ -121,47 +132,31 @@ namespace {
 
     void check_time();
 
-#if 0
-	struct Skill {
-		Skill(const int l, const int mr)
-			: level(l),
-			  max_random_score_diff(static_cast<Score>(mr)),
-			  best(Move::moveNone()) {}
-		~Skill() {}
-		void swapIfEnabled() {
-			if (enabled()) {
-				auto it = std::find(RootMoves.begin(),
-									RootMoves.end(),
-									(!best.isNone() ? best : pickMove()));
-				if (RootMoves.begin() != it)
-					SYNCCOUT << "info string swap multipv 1, " << it - RootMoves.begin() + 1 << SYNCENDL;
-				std::swap(RootMoves[0], *it);
+#if 1
+	Move Skill::pick_best(size_t multiPV) {
+
+		const RootMoves& rootMoves = Threads.main()->rootMoves;
+		static PRNG rng(now());
+
+		Score topScore = rootMoves[0].score;
+		int delta = std::min(topScore - rootMoves[multiPV - 1].score, PawnScore);
+		int weakness = 120 - 2 * level;
+		int maxScore = -ScoreInfinite;
+
+		for (size_t i = 0; i < multiPV; ++i)
+		{
+			int push = (weakness * int(topScore - rootMoves[i].score)
+						+ delta * (rng.rand<unsigned>() % weakness)) / 128;
+
+			if (rootMoves[i].score + push > maxScore)
+			{
+				maxScore = rootMoves[i].score + push;
+				best = rootMoves[i].pv[0];
 			}
-		}
-		bool enabled() const { return level < 20 || max_random_score_diff != ScoreZero; }
-		bool timeToPick(const int depth) const { return depth == 1 + level; }
-		Move pickMove() {
-			// level については未対応。max_random_score_diff についてのみ対応する。
-			if (max_random_score_diff != ScoreZero) {
-				size_t i = 1;
-				for (; i < MultiPV; ++i) {
-					if (max_random_score_diff < RootMoves[0].score - RootMoves[i].score)
-						break;
-				}
-				// 0 から i-1 までの間でランダムに選ぶ。
-				std::uniform_int_distribution<size_t> dist(0, i-1);
-				best = RootMoves[dist(g_randomTimeSeed)].pv[0];
-				return best;
-			}
-			best = RootMoves[0].pv[0];
-			return best;
 		}
 
-		int level;
-        size_t candidates;
-		Move best;
-        Score max_random_score_diff;
-	};
+		return best;
+	}
 #endif
 	Score scoreToTT(const Score s, const Ply ply) {
 		assert(s != ScoreNone);
@@ -302,7 +297,7 @@ namespace {
 
 std::string pvInfoToUSI(Position& pos, const Depth depth, const Score alpha, const Score beta) {
 	std::stringstream ss;
-    const int t = Time.elapsed(); //Time.elapsed() + 1;
+    const int t = Time.elapsed() + 1;
     const RootMoves& rootMoves = pos.thisThread()->rootMoves;
     size_t pvIdx = pos.thisThread()->pvIdx;
     size_t multiPV = std::min((size_t)Options["MultiPV"], rootMoves.size());
@@ -329,14 +324,13 @@ std::string pvInfoToUSI(Position& pos, const Depth depth, const Score alpha, con
            ss << (s >= beta ? " lowerbound" : s <= alpha ? " upperbound" : "");
 
         ss << " nodes " << nodesSearched
-           << " nps " << (0 < t ? nodesSearched * 1000 / t : 0);
+           << " nps " << nodesSearched * 1000 / t;
 
-#ifdef INFO_HASHFULL
         if (t > 1000) // Earlier makes little sense
             ss << " hashfull " << TT.hashfull();
-#endif
+
 		ss << " time " << t
-		   << " pv ";
+		   << " pv";
 
 		for (Move m : rootMoves[i].pv)
 			ss << " " << m.toUSI();
@@ -451,6 +445,21 @@ void MainThread::search() {
 	const Ply book_ply = dist(g_randomTimeSeed);
 
 	bool nyugyokuWin = false;
+
+	int contempt = Options["Contempt"] * PawnScore / 100; // From centipawns
+	DrawScore[us] = ScoreDraw - Score(contempt);
+	DrawScore[~us] = ScoreDraw + Score(contempt);
+
+	// 指し手が無ければ負け
+	if (rootMoves.empty()) {
+		rootMoves.push_back(RootMove(Move::moveNone()));
+		SYNCCOUT << "info depth 0 score "
+			<< scoreToUSI(-ScoreMate0Ply)
+			<< SYNCENDL;
+
+		goto finalize;
+	}
+
 #if defined LEARN
 #else
 	if (nyugyoku(pos)) {
@@ -530,9 +539,6 @@ finalize:
     if (Limits.npmsec)
       Time.availableNodes += Limits.inc[us] - Threads.nodes_searched();
 
-	//SYNCCOUT << "info nodes " << pos.nodesSearched()
-	//		 << " time " << /*Search*/Time.elapsed() << SYNCENDL;
-
 	if (!Signals.stop && (Limits.ponder || Limits.infinite)) {
 		Signals.stopOnPonderhit = true;
 		wait(Signals.stop);
@@ -549,7 +555,7 @@ finalize:
       && !isbook
       &&  Options["MultiPV"] == 1
       && !Limits.depth
-      /*&& !Skill(Options["Skill Level"]).enabled()*/
+      && !Skill(Options["Skill_Level"]).enabled()
       && rootMoves[0].pv[0] != MOVE_NONE)
     {
       for (Thread* th : Threads)
@@ -564,7 +570,8 @@ finalize:
         SYNCCOUT << pvInfoToUSI(bestThread->rootPos, bestThread->completedDepth, -ScoreInfinite, ScoreInfinite) << SYNCENDL;
 
 #ifdef RESIGN
-    if (!isbook && previousScore < -Options["Resign"])
+    if (!isbook && previousScore < -Options["Resign"] 
+		&& !Skill(Options["Skill_Level"]).enabled()) // 
         SYNCCOUT << "bestmove resign" << SYNCENDL;
 #endif
     if (nyugyokuWin)
@@ -612,30 +619,13 @@ void Thread::search() {
 
 #endif
 
-	MultiPV = Options["MultiPV"];
-#if 0
-	Skill skill(Options["Skill_Level"], Options["Max_Random_Score_Diff"]);
+	size_t multiPV = Options["MultiPV"];
+	Skill skill(Options["Skill_Level"]);
 
-	if (Options["Max_Random_Score_Diff_Ply"] < pos.gamePly()) {
-		skill.max_random_score_diff = ScoreZero;
-		MultiPV = 1;
-		assert(!skill.enabled()); // level による設定が出来るようになるまでは、これで良い。
-	}
+	if (skill.enabled())
+		multiPV = std::max(multiPV, (size_t)4);
 
-	//if (skill.enabled() && MultiPV < 3)
-	//	MultiPV = 3;
-#endif
-	MultiPV = std::min(MultiPV, rootMoves.size());
-
-	// 指し手が無ければ負け
-	if (rootMoves.empty()) {
-		rootMoves.push_back(RootMove(Move::moveNone()));
-		SYNCCOUT << "info depth 0 score "
-				 << scoreToUSI(-ScoreMate0Ply)
-				 << SYNCENDL;
-
-		return;
-	}
+	multiPV = std::min(multiPV, rootMoves.size());
 
 	// 反復深化で探索を行う。
 	while (++rootDepth <= DepthMax // (rootDepth += OnePly) < DepthMax
@@ -657,7 +647,7 @@ void Thread::search() {
 			rm.previousScore = rm.score;
 
 		// Multi PV loop
-		for (pvIdx = 0; pvIdx < MultiPV && !Signals.stop; ++pvIdx) {
+		for (pvIdx = 0; pvIdx < multiPV && !Signals.stop; ++pvIdx) {
 #if defined LEARN
 			alpha = this->alpha;
 			beta  = this->beta;
@@ -696,7 +686,7 @@ void Thread::search() {
 					break;
 #ifdef PVINFOTOUSI_FAILLOW_FAILHIGH
 				if (mainThread
-                  && MultiPV == 1
+                  && multiPV == 1
                   && (bestScore <= alpha || bestScore >= beta)
                   && 3000 < Time.elapsed()
 					// 将棋所のコンソールが詰まるのを防ぐ。
@@ -742,7 +732,7 @@ void Thread::search() {
               lastInfoTime = Time.elapsed();
             }
 
-            else if ((pvIdx + 1 == MultiPV
+            else if ((pvIdx + 1 == multiPV
                 || 3000 < Time.elapsed())
 				// 将棋所のコンソールが詰まるのを防ぐ。
 				&& (rootDepth < 4 || lastInfoTime + pv_interval < Time.elapsed()))
@@ -758,9 +748,8 @@ void Thread::search() {
         if (!mainThread)
           continue;
 
-		//if (skill.enabled() && skill.timeToPick(rootDepth)) {
-		//	skill.pickMove();
-		//}
+		if (skill.enabled() && skill.time_to_pick(rootDepth))
+			skill.pick_best(multiPV);
 
 #if 0
         // Have we found a "mate in x"?
@@ -807,6 +796,10 @@ void Thread::search() {
 
     if (EasyMove.stableCnt < 6 || mainThread->easyMovePlayed)
       EasyMove.clear();
+
+	if (skill.enabled())
+		std::swap(rootMoves[0], *std::find(rootMoves.begin(),
+										   rootMoves.end(), skill.best_move(multiPV)));
 
 	//skill.swapIfEnabled();
 	//SYNCCOUT << pvInfoToUSI(rootPos, rootDepth-1, alpha, beta) << SYNCENDL;
@@ -896,7 +889,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 		// stop と最大探索深さのチェック
 		switch (pos.isDraw(16)) {
 		case NotRepetition      : if (!Signals.stop.load(std::memory_order_relaxed) && ss->ply <= MaxPly) { break; }
-		case RepetitionDraw     : return ScoreDraw;
+		case RepetitionDraw     : return DrawScore[pos.turn()];
 		case RepetitionWin      : return mateIn(ss->ply);
 		case RepetitionLose     : return matedIn(ss->ply);
 		case RepetitionSuperior : if (ss->ply != 2) { return ScoreMateInMaxPly; } break;
@@ -1458,7 +1451,7 @@ Score qsearch(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dep
 	ss->ply = (ss-1)->ply + 1;
 
 	if (MaxPly < ss->ply)
-		return ScoreDraw;
+		return DrawScore[pos.turn()];
 
 	ttDepth = ((INCHECK || DepthQChecks <= depth) ? DepthQChecks : DepthQNoChecks);
 
@@ -1479,8 +1472,8 @@ Score qsearch(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dep
 	}
 
 	pos.setNodesSearched(pos.nodesSearched() + 1);
-#ifndef TMEPO
-	ss->staticEval = bestScore = evaluate(pos, ss);
+#ifndef TEMPO
+	//ss->staticEval = bestScore = evaluate(pos, ss);
 #endif
 	if (INCHECK) {
 		ss->staticEval = ScoreNone;
@@ -1647,4 +1640,3 @@ bool RootMove::extract_ponder_from_tt(Position& pos)
     pos.undoMove(pv[0]);
     return pv.size() > 1;
 }
-

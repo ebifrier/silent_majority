@@ -46,7 +46,7 @@ void benchmark(const Position& current, istream& is) {
   string fenFile   = (is >> token) ? token : "default";
   string limitType = (is >> token) ? token : "depth";
 
-  Options["Hash"]    = ttSize;
+  Options["USI_Hash"] = ttSize;
   Options["Threads"] = threads;
   Search::clear();
 
@@ -56,8 +56,8 @@ void benchmark(const Position& current, istream& is) {
   else if (limitType == "nodes")
       limits.nodes = stoi(limit);
 
-  //else if (limitType == "mate")
-  //    limits.mate = stoi(limit);
+  else if (limitType == "mate")
+      limits.mate = stoi(limit);
 
   else
       limits.depth = stoi(limit);
