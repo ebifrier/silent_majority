@@ -682,13 +682,13 @@ void Thread::search() {
 				if (Signals.stop)
 					break;
 
-#ifdef PVINFOTOUSI_FAILLOW_FAILHIGH
+#ifdef USE_extractPVFromTT
 				if (mainThread
 					&& multiPV == 1
 					&& (bestScore <= alpha || bestScore >= beta)
 					&& 3000 < Time.elapsed()
 					// 将棋所のコンソールが詰まるのを防ぐ。
-					&& (rootDepth < 4 || lastInfoTime + pv_interval < Time.elapsed()))
+					&& (60000 < Time.elapsed() || lastInfoTime + 3000 < Time.elapsed()))
 				{
 					lastInfoTime = Time.elapsed();
 					SYNCCOUT << pvInfoToUSI(rootPos, rootDepth, alpha, beta) << SYNCENDL;
@@ -723,12 +723,9 @@ void Thread::search() {
 			if (!mainThread)
 				continue;
 
-			if (Signals.stop);
-
-			else if ((pvIdx + 1 == multiPV
-					  || 3000 < Time.elapsed())
-					 // 将棋所のコンソールが詰まるのを防ぐ。
-					 && (rootDepth < 4 || lastInfoTime + pv_interval < Time.elapsed()))
+			if ((Signals.stop || pvIdx + 1 == multiPV || 3000 < Time.elapsed())
+			    // 将棋所のコンソールが詰まるのを防ぐ。
+			    && (rootDepth < 4 || lastInfoTime + pv_interval < Time.elapsed()))
 			{
 				lastInfoTime = Time.elapsed();
 				SYNCCOUT << pvInfoToUSI(rootPos, rootDepth, alpha, beta) << SYNCENDL;
@@ -894,7 +891,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 	// step4
 	// trans position table lookup
 	excludedMove = ss->excludedMove;
-#ifndef EXCLUDEKEY
+#if 1
 	posKey = pos.getKey() ^ Key(excludedMove.value() << 1);
 #else
 	posKey = (!excludedMove ? pos.getKey() : pos.getExclusionKey());
@@ -953,7 +950,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 		}
 	}
 	else {
-#ifdef TEMPO
+#if 1
         if ((ss-1)->currentMove == MOVE_NULL)
             eval = ss->staticEval = -(ss-1)->staticEval + 2 * Tempo;
 #endif
@@ -1215,7 +1212,7 @@ moves_loop:
 				if (cutNode)
 					r += 2 * OnePly;
 
-#ifdef STEP15_ESCAPE_CAPTURE
+#if 0
 				// Decrease reduction for moves that escape a capture
 				else if (!move.isDrop()//type_of(move) == NORMAL
 						 //&& pieceToPieceType(pos.piece(move.to())) != Pawn //type_of(pos.piece(move.to())) != Pawn
@@ -1288,13 +1285,16 @@ moves_loop:
 			if (moveCount == 1 || alpha < score) {
 				// PV move or new best move
 				rm.score = score;
+#ifdef USE_extractPVFromTT
+				rm.extractPVFromTT(pos);
+#else
                 rm.pv.resize(1);
 
                 assert((ss+1)->pv);
 
                 for (Move* m = (ss+1)->pv; *m != MOVE_NONE; ++m)
                     rm.pv.push_back(*m);
-
+#endif
 				if (moveCount > 1 && thisThread == Threads.main())
 					++static_cast<MainThread*>(thisThread)->bestMoveChanges;
 			}
@@ -1406,9 +1406,6 @@ Score qsearch(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dep
 		return ttScore;
 	}
 
-#ifdef TEMPO
-	//ss->staticEval = bestScore = evaluate(pos, ss);
-#endif
 	if (INCHECK) {
 		ss->staticEval = ScoreNone;
 		bestScore = futilityBase = -ScoreInfinite;
@@ -1418,20 +1415,18 @@ Score qsearch(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dep
 			return mateIn(ss->ply);
 
 		if (ttHit) {
-#ifdef TEMPO
 			if ((ss->staticEval = bestScore = tte->evalScore()) == ScoreNone)
 				ss->staticEval = bestScore = evaluate(pos, ss);
-#endif
+
 			if (ttScore != ScoreNone)
 				if (tte->bound() & (ttScore > bestScore ? BoundLower : BoundUpper))
 					bestScore = ttScore;
 		}
-#ifdef TEMPO
 		else
 			ss->staticEval = bestScore = 
             (((ss-1)->currentMove != MOVE_NULL) ? evaluate(pos, ss) 
                                                 : -(ss-1)->staticEval + 2 * Tempo);
-#endif
+
         // Stand pat
 		if (bestScore >= beta) {
 			if (!ttHit)
@@ -1446,9 +1441,9 @@ Score qsearch(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dep
 
 		futilityBase = bestScore + 128; // todo: 128 より大きくて良いと思う。
 	}
-#ifdef TEMPO
+
 	evaluate(pos, ss);
-#endif
+
 	MovePicker mp(pos, ttMove, depth, (ss-1)->currentMove.to());
 	const CheckInfo ci(pos);
 
@@ -1571,3 +1566,34 @@ bool RootMove::extract_ponder_from_tt(Position& pos)
     pos.undoMove(pv[0]);
     return pv.size() > 1;
 }
+
+#ifdef USE_extractPVFromTT
+void RootMove::extractPVFromTT(Position& pos) {
+	StateInfo state[MaxPly+7];
+	StateInfo* st = state;
+	TTEntry* tte;
+	Ply ply = 0;
+	Move m = pv[0];
+	bool ttHit;
+
+	assert(m && pos.moveIsPseudoLegal(m));
+
+	pv.clear();
+
+	do {
+		pv.push_back(m);
+
+		assert(pos.moveIsLegal(pv[ply]));
+		pos.doMove(pv[ply++], *st++);
+		tte = TT.probe(pos.getKey(), ttHit);
+	} while (ttHit
+			 // このチェックは少し無駄。駒打ちのときはmove16toMove() 呼ばなくて良い。
+			 && pos.moveIsPseudoLegal(m = move16toMove(tte->move(), pos))
+			 && pos.pseudoLegalMoveIsLegal<false, false>(m, pos.pinnedBB())
+			 && ply < MaxPly
+			 && (!pos.isDraw(20) || ply < 6));
+
+	while (ply)
+		pos.undoMove(pv[--ply]);
+}
+#endif

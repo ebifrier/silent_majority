@@ -83,14 +83,9 @@
 #endif
 
 
-#if 0
-// faillow failhigh を出力する
-#define PVINFOTOUSI_FAILLOW_FAILHIGH
-#endif
-
 #if 1
-// 評価関数ファイルを"isready"で読み込む
-#define INIT_EVALBIN_ISREADY
+// extractPVFromTTを使用する
+#define USE_extractPVFromTT
 #endif
 
 #if 1
@@ -99,8 +94,5 @@
 #endif
 
 //#define RESIGN
-//#define EXCLUDEKEY
-//#define STEP15_ESCAPE_CAPTURE
-#define TEMPO
 
 #endif // #ifndef APERY_IFDEF_HPP

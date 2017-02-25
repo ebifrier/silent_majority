@@ -42,10 +42,6 @@ int main(int argc, char* argv[]) {
     Threads.init();
     TT.resize(Options["USI_Hash"]);
 
-#ifndef INIT_EVALBIN_ISREADY
-	// 一時オブジェクトの生成と破棄
-	std::unique_ptr<Evaluater>(new Evaluater)->init(Options["Eval_Dir"], true);
-#endif
 	USI::loop(argc, argv);
 	Threads.exit();
 }

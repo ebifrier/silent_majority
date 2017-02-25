@@ -84,17 +84,17 @@ void init(OptionsMap& o) {
 //	o["Write_Synthesized_Eval"]      = Option(false);
 	o["USI_Ponder"]                  = Option(false);
 	o["Byoyomi_Margin"]              = Option(0, 0, INT_MAX);
-    o["Inc_Margin"]                  = Option(4500, 0, INT_MAX);
+    o["Inc_Margin"]                  = Option(3000, 0, INT_MAX);
 	o["MultiPV"]                     = Option(1, 1, MaxLegalMoves);
 	o["Skill_Level"]                 = Option(20, 0, 20);
 //	o["Max_Random_Score_Diff"]       = Option(0, 0, ScoreMate0Ply);
 //	o["Max_Random_Score_Diff_Ply"]   = Option(0, 0, SHRT_MAX);
-	o["Slow_Mover"]                  = Option(100, 10, 1000);
+	o["Slow_Mover"]                  = Option(89, 10, 1000);
 	o["Minimum_Thinking_Time"]       = Option(10, 0, INT_MAX);
 	o["Threads"]                     = Option(cpuCoreCount(), 1, 128, onThreads);
     o["Move_Overhead"] = Option(30, 0, 5000);
     o["nodestime"]     = Option(0, 0, 10000);
-	o["PvInterval"]    = Option(0, 0, 10000);
+	o["PvInterval"]    = Option(100, 0, 10000);
 	o["Contempt"]      = Option(0, -100, 100);
 #ifdef RESIGN
     o["Resign"]        = Option(2000, 0, 10000);
@@ -412,7 +412,7 @@ void measureGenerateMoves(const Position& pos) {
 #endif
 
 #ifdef NDEBUG
-const std::string MyName = "SILENT_MAJORITY 1.23";
+const std::string MyName = "SILENT_MAJORITY 1.231";
 #else
 const std::string MyName = "Apery Debug Build";
 #endif
@@ -463,9 +463,7 @@ void USI::loop(int argc, char* argv[]) {
 												<< "\nusiok" << SYNCENDL;
 		else if (token == "go"       ) go(pos, ssCmd);
 		else if (token == "isready") {
-#ifdef INIT_EVALBIN_ISREADY
 			std::unique_ptr<Evaluater>(new Evaluater)->init(Options["Eval_Dir"], true);
-#endif
 			SYNCCOUT << "readyok" << SYNCENDL;
 		}
 		else if (token == "position" ) setPosition(pos, ssCmd);
@@ -483,9 +481,7 @@ void USI::loop(int argc, char* argv[]) {
 #if !defined MINIMUL
 		// 以下、デバッグ用
 		else if (token == "bench") {
-#ifdef INIT_EVALBIN_ISREADY
-			std::unique_ptr<Evaluater>(new Evaluater)->init(Options["Eval_Dir"], true);
-#endif			
+			std::unique_ptr<Evaluater>(new Evaluater)->init(Options["Eval_Dir"], true);	
 			benchmark(pos, ssCmd);
 		}
 		else if (token == "key"      ) SYNCCOUT << pos.getKey() << SYNCENDL;

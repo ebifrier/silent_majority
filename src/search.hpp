@@ -33,6 +33,9 @@ struct RootMove {
 	bool operator < (const RootMove& m) const { return m.score < score; }
 	bool operator == (const Move& m) const { return pv[0] == m; }
     bool extract_ponder_from_tt(Position& pos);
+#ifdef USE_extractPVFromTT
+	void extractPVFromTT(Position& pos);
+#endif
 
 	Score score = -ScoreInfinite;
 	Score previousScore = -ScoreInfinite;
