@@ -389,10 +389,8 @@ public:
   { return T(rand64() & rand64() & rand64()); }
 };
 
-#ifdef Handle_Windows_Processors_Groups
 namespace WinProcGroup {
 	void bindThisThread(size_t idx);
 }
-#endif
 
 #endif // #ifndef APERY_COMMON_HPP

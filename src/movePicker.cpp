@@ -94,50 +94,42 @@ MovePicker::MovePicker(const Position& p, const Move ttm, Score th)
 
 void MovePicker::scoreCaptures() {
 	for (auto& m : *this) {
-		const Move move = m;
-		m.score = Position::pieceScore(pos.piece(move.to())) - LVA(move.pieceTypeFrom());
+		m.score = Position::pieceScore(pos.piece(m.move.to())) - LVA(m.move.pieceTypeFrom());
 	}
 }
 
 template <bool IsDrop> void MovePicker::scoreNonCapturesMinusPro() {
 	const HistoryStats& history = pos.thisThread()->history;
-	const FromToStats& fromTo = pos.thisThread()->fromTo;
-	Color c = pos.turn();
+	const Color c = pos.turn();
 
 	const CounterMoveStats* cmh = (ss-1)->counterMoves;
 	const CounterMoveStats* fmh = (ss-2)->counterMoves;
 	const CounterMoveStats* fmh2 = (ss-4)->counterMoves;
 
 	for (auto& m : *this) {
-		const Move move = m;
-
-		m.score = history[pos.movedPiece(move)][move.to()]
-			+ (cmh  ?  (*cmh)[pos.movedPiece(move)][move.to()] : ScoreZero)
-			+ (fmh  ?  (*fmh)[pos.movedPiece(move)][move.to()] : ScoreZero)
-			+ (fmh2 ? (*fmh2)[pos.movedPiece(move)][move.to()] : ScoreZero)
-			+ fromTo.get(c, move)
+		const Piece pc = pos.movedPiece(m.move);
+		const Square sq = m.move.to();
+		m.score = history.get(c, m.move)
+			+ (cmh  ?  (*cmh)[pc][sq] : ScoreZero)
+			+ (fmh  ?  (*fmh)[pc][sq] : ScoreZero)
+			+ (fmh2 ? (*fmh2)[pc][sq] : ScoreZero)
 			;
 	}
 }
 
 void MovePicker::scoreEvasions() {
 	const HistoryStats& history = pos.thisThread()->history;
-	const FromToStats& fromTo = pos.thisThread()->fromTo;
-	Color c = pos.turn();
+	const Color c = pos.turn();
 
 	for (auto& m : *this) {
-		const Move move = m;
-
-		if (move.isCaptureOrPromotion()) {
-			m.score = pos.capturePieceScore(pos.piece(move.to())) + HistoryStats::Max;
-			if (move.isPromotion()) {
-				m.score += Position::promotePieceScore(move.pieceTypeFrom());
+		if (m.move.isCaptureOrPromotion()) {
+			m.score = pos.capturePieceScore(pos.piece(m.move.to())) + HistoryStats::Max;
+			if (m.move.isPromotion()) {
+				m.score += Position::promotePieceScore(m.move.pieceTypeFrom());
 			}
 		}
 		else
-			m.score = history[pos.movedPiece(move)][move.to()]
-			+ fromTo.get(c, move)
-			;
+			m.score = history.get(c, m.move);
 	}
 }
 

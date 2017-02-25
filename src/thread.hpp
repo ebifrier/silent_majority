@@ -36,7 +36,6 @@ public:
 	HistoryStats history;
 	MoveStats counterMoves;
 	CounterMoveHistoryStats counterMoveHistory;
-	FromToStats fromTo;
 };
 
 struct MainThread : public Thread {

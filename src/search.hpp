@@ -6,8 +6,8 @@
 #include "tt.hpp"
 #include "evaluate.hpp"
 
-template<typename T, bool CM> struct Stats;
-typedef Stats<Score, true> CounterMoveStats;
+template<typename T> struct Stats;
+typedef Stats<Score> CounterMoveStats;
 
 namespace Search {
 
@@ -82,7 +82,6 @@ struct SignalsType {
 	void init();
     void clear();
     Score evaluate(Position& pos, Search::Stack* ss);
-    const Score Tempo = Score(20); // Must be visible to search
 
 }; // namespace Search
 

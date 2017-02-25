@@ -88,11 +88,6 @@
 #define USE_extractPVFromTT
 #endif
 
-#if 1
-// 64core以上使用する
-#define Handle_Windows_Processors_Groups
-#endif
-
 //#define RESIGN
 
 #endif // #ifndef APERY_IFDEF_HPP

@@ -5,11 +5,8 @@
 #include "position.hpp"
 #include "search.hpp"
 
-template<typename T, bool CM = false>
+template<typename T>
 struct Stats {
-
-  static const Score Max = Score(1 << 28);
-
   const T* operator[](Piece pc) const { return table[pc]; }
   T* operator[](Piece pc) { return table[pc]; }
   void clear() { std::memset(table, 0, sizeof(table)); }
@@ -20,7 +17,7 @@ struct Stats {
     if (abs(int(v)) >= 324)
       return;
 
-    table[pc][to] -= table[pc][to] * abs(int(v)) / (CM ? 936 : 324);
+    table[pc][to] -= table[pc][to] * abs(int(v)) / 936;
     table[pc][to] += int(v) * 32;
   }
 
@@ -29,12 +26,12 @@ private:
 };
 
 typedef Stats<Move> MoveStats;
-typedef Stats<Score, false> HistoryStats;
-typedef Stats<Score, true> CounterMoveStats;
+typedef Stats<Score> CounterMoveStats;
 typedef Stats<CounterMoveStats> CounterMoveHistoryStats;
 
 
-struct FromToStats {
+struct HistoryStats {
+  static const Score Max = Score(1 << 28);
 
   Score get(Color c, Move m) const { return table[c][m.from()][m.to()]; }
   void clear() { std::memset(table, 0, sizeof(table)); }

@@ -14,7 +14,6 @@ std::ostream& operator << (std::ostream& os, SyncCout sc) {
 	return os;
 }
 
-#ifdef Handle_Windows_Processors_Groups
 
 #include "thread.hpp"
 
@@ -148,5 +147,3 @@ void bindThisThread(size_t idx) {
 #endif
 
 } // namespace WinProcGroup
-
-#endif
