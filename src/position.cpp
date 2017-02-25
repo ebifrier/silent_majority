@@ -242,6 +242,7 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
 
 	st_->cl.size = 1;
 
+	++gamePly_;
 	const Color us = turn();
 	const Square to = move.to();
 	const PieceType ptCaptured = move.cap();
@@ -473,6 +474,7 @@ void Position::undoMove(const Move move) {
 	// key などは StateInfo にまとめられているので、
 	// previous のポインタを st_ に代入するだけで良い。
 	st_ = st_->previous;
+	--gamePly_;
 
 	assert(isOK());
 }

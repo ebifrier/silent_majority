@@ -923,6 +923,11 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 	}
 
 #if 1
+	if (pos.gamePly() > 200 && nyugyoku(pos)) {
+		return mateIn(ss->ply);
+	}
+#endif
+#if 1
 	if (!rootNode
 		&& !inCheck)
 	{
