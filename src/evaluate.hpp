@@ -152,6 +152,7 @@ inline std::array<Tl, 2> operator -= (std::array<Tl, 2>& lhs, const std::array<T
 }
 
 template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterBase {
+#ifdef LEARN
 	static const int R_Mid = 8; // 相対位置の中心のindex
 	constexpr int MaxWeight() const { return 1 << 22; } // KPE自体が1/32の寄与。更にKPEの遠隔駒の利きが1マスごとに1/2に減衰する分(最大でKEEの際に8マス離れが2枚)
 														// 更に重みを下げる場合、MaxWeightを更に大きくしておく必要がある。
@@ -814,6 +815,7 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 		assert(retIdx <= KKIndicesMax);
 	}
 	void clear() { memset(this, 0, sizeof(*this)); } // float 型とかだと規格的に 0 は保証されなかった気がするが実用上問題ないだろう。
+#endif
 };
 
 struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, std::array<s32, 2> > {
@@ -866,6 +868,7 @@ struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, 
 		ALL_SYNTHESIZED_EVAL;
 #undef FOO
 	}
+#ifdef LEARN
 	static void readSomeSynthesized(const std::string& dirName) {
 #define FOO(x) {														\
 			std::ifstream ifs((addSlashIfNone(dirName) + #x "_some_synthesized.bin").c_str(), std::ios::binary); \
@@ -1061,6 +1064,7 @@ struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, 
 		SYNCCOUT << "info string end setting eval table" << SYNCENDL;
 #endif
 	}
+#endif
 };
 
 extern const int kppArray[31];

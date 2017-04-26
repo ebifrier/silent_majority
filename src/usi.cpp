@@ -91,7 +91,7 @@ void init(OptionsMap& o) {
 //	o["Max_Random_Score_Diff_Ply"]   = Option(0, 0, SHRT_MAX);
 	o["Slow_Mover"]                  = Option(89, 10, 1000);
 	o["Minimum_Thinking_Time"]       = Option(10, 0, INT_MAX);
-	o["Threads"]                     = Option(cpuCoreCount(), 1, 128, onThreads);
+	o["Threads"]                     = Option(cpuCoreCount(), 1, 512, onThreads);
     o["Move_Overhead"] = Option(30, 0, 5000);
     o["nodestime"]     = Option(0, 0, 10000);
 	o["PvInterval"]    = Option(100, 0, 10000);
@@ -412,6 +412,7 @@ void measureGenerateMoves(const Position& pos) {
 #endif
 
 #ifdef NDEBUG
+const std::string MyName = "SILENT_MAJORITY 1.25";
 #else
 const std::string MyName = "Apery Debug Build";
 #endif

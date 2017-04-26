@@ -3,11 +3,10 @@
 #include "thread.hpp"
 
 namespace {
-const Score LVATable[PieceTypeNum] = {
-	Score(0), Score(1), Score(2), Score(3), Score(4), Score(7), Score(8), Score(6), Score(10000),
-	Score(5), Score(5), Score(5), Score(5), Score(9), Score(10)
+const int LVATable[PieceTypeNum] = {
+	0, 1, 2, 3, 4, 7, 8, 6, 10000, 5, 5, 5, 5, 9, 10
 };
-inline Score LVA(const PieceType pt) { return LVATable[pt]; }
+inline int LVA(const PieceType pt) { return LVATable[pt]; }
 
 enum Stages {
 	MAIN_SEARCH, CAPTURES_INIT, GOOD_CAPTURES, KILLERS, COUNTERMOVE, QUIET_INIT, QUIET, BAD_CAPTURES,
@@ -18,21 +17,22 @@ enum Stages {
 	QSEARCH_RECAPTURES, QRECAPTURES
 };
 
-  void insertion_sort(ExtMove* begin, ExtMove* end)
-  {
-    ExtMove tmp, *p, *q;
+  void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 
-    for (p = begin + 1; p < end; ++p)
-    {
-        tmp = *p;
-        for (q = p; q != begin && *(q-1) < tmp; --q)
-            *q = *(q-1);
-        *q = tmp;
-    }
+      for (ExtMove *sortedEnd = begin + 1, *p = begin + 1; p < end; ++p)
+          if (p->score >= limit)
+          {
+              ExtMove tmp = *p, *q;
+              *p = *sortedEnd;
+              for (q = sortedEnd; q != begin && *(q - 1) < tmp; --q)
+                  *q = *(q - 1);
+              *q = tmp;
+              ++sortedEnd;
+          }
   }
 
-  Move pick_best(ExtMove* begin, ExtMove* end)
-  {
+  Move pick_best(ExtMove* begin, ExtMove* end) {
+
       std::swap(*begin, *std::max_element(begin, end));
       return *begin;
   }
@@ -69,7 +69,6 @@ MovePicker::MovePicker(const Position& p, Move ttm, const Depth d, const Square 
 	else {
         stage = QSEARCH_RECAPTURES;
 		recaptureSquare = sq;
-		//ttm = Move::moveNone();
 		return;
 	}
 
@@ -87,7 +86,7 @@ MovePicker::MovePicker(const Position& p, const Move ttm, Score th)
 	ttMove = (ttm
 			  && pos.moveIsPseudoLegal(ttm)
 			  && ttm.isCaptureOrPawnPromotion()
-			  && pos.seeGe(ttm, threshold + 1) ? ttm : MOVE_NONE);
+			  && pos.seeGe(ttm, threshold) ? ttm : MOVE_NONE);
 
 	stage += (ttMove == MOVE_NONE);
 }
@@ -102,18 +101,17 @@ template <bool IsDrop> void MovePicker::scoreNonCapturesMinusPro() {
 	const HistoryStats& history = pos.thisThread()->history;
 	const Color c = pos.turn();
 
-	const CounterMoveStats* cmh = (ss-1)->counterMoves;
-	const CounterMoveStats* fmh = (ss-2)->counterMoves;
-	const CounterMoveStats* fmh2 = (ss-4)->counterMoves;
+	const CounterMoveStats& cmh = *(ss-1)->counterMoves;
+	const CounterMoveStats& fmh = *(ss-2)->counterMoves;
+	const CounterMoveStats& fm2 = *(ss-4)->counterMoves;
 
 	for (auto& m : *this) {
 		const Piece pc = pos.movedPiece(m.move);
 		const Square sq = m.move.to();
 		m.score = history.get(c, m.move)
-			+ (cmh  ?  (*cmh)[pc][sq] : ScoreZero)
-			+ (fmh  ?  (*fmh)[pc][sq] : ScoreZero)
-			+ (fmh2 ? (*fmh2)[pc][sq] : ScoreZero)
-			;
+			+ cmh[pc][sq]
+			+ fmh[pc][sq]
+			+ fm2[pc][sq];
 	}
 }
 
@@ -133,7 +131,7 @@ void MovePicker::scoreEvasions() {
 	}
 }
 
-Move MovePicker::nextMove() {
+Move MovePicker::nextMove(bool skipQuiets) {
 	Move move;
 
 	switch (stage) {
@@ -198,18 +196,11 @@ Move MovePicker::nextMove() {
 		endMoves = generateMoves<Drop>(cur, pos);
 		scoreNonCapturesMinusPro<true>();
 		cur = endBadCaptures;
-		if (depth < 3 * OnePly)
-		{
-			ExtMove* goodQuiet = std::partition(cur, endMoves, [](const ExtMove& m)
-			                                      { return m.score > ScoreZero; });
-			insertion_sort(cur, goodQuiet);
-		}
-		else
-			insertion_sort(cur, endMoves);
+        partial_insertion_sort(cur, endMoves, -4000 * depth / OnePly);
 		++stage;
 
 	case QUIET:
-		while (cur < endMoves)
+		while (cur < endMoves && (!skipQuiets || cur->score >= 0))
 		{
 			move = *cur++;
 			if (move != ttMove
@@ -252,7 +243,7 @@ Move MovePicker::nextMove() {
 		{
 			move = pick_best(cur++, endMoves);
 			if (move != ttMove 
-				&& pos.seeGe(move, threshold + 1))
+				&& pos.seeGe(move, threshold))
 				return move;
 		}
 		break;

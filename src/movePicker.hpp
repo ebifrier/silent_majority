@@ -5,20 +5,35 @@
 #include "position.hpp"
 #include "search.hpp"
 
+struct HistoryStats {
+  static const int Max = 1 << 28;
+
+  int get(Color c, Move m) const { return table[c][m.from()][m.to()]; }
+  void clear() { std::memset(table, 0, sizeof(table)); }
+  void update(Color c, Move m, int v) {
+    Square f = m.from();
+    Square t = m.to();
+    const int D = 324;
+    assert(abs(v) <= D); // Consistency check for below formula
+    table[c][f][t] -= table[c][f][t] * abs(v) / D;
+    table[c][f][t] += v * 32;
+  }
+
+private:
+  int table[ColorNum][SquareNum + PieceTypeNum][SquareNum];
+};
+
 template<typename T>
 struct Stats {
   const T* operator[](Piece pc) const { return table[pc]; }
   T* operator[](Piece pc) { return table[pc]; }
   void clear() { std::memset(table, 0, sizeof(table)); }
   void update(Piece pc, Square to, Move m) { table[pc][to] = m; }
-
-  void update(Piece pc, Square to, Score v) {
-
-    if (abs(int(v)) >= 324)
-      return;
-
-    table[pc][to] -= table[pc][to] * abs(int(v)) / 936;
-    table[pc][to] += int(v) * 32;
+  void update(Piece pc, Square to, int v) {
+    const int D = 936;
+    assert(abs(int(v)) <= D); // Consistency check for below formula
+    table[pc][to] -= table[pc][to] * abs(v) / D;
+    table[pc][to] += v * 32;
   }
 
 private:
@@ -26,31 +41,8 @@ private:
 };
 
 typedef Stats<Move> MoveStats;
-typedef Stats<Score> CounterMoveStats;
+typedef Stats<int> CounterMoveStats;
 typedef Stats<CounterMoveStats> CounterMoveHistoryStats;
-
-
-struct HistoryStats {
-  static const Score Max = Score(1 << 28);
-
-  Score get(Color c, Move m) const { return table[c][m.from()][m.to()]; }
-  void clear() { std::memset(table, 0, sizeof(table)); }
-
-  void update(Color c, Move m, Score s)
-  {
-    if (abs(int(s)) >= 324)
-      return;
-
-    Square f = m.from();
-    Square t = m.to();
-
-    table[c][f][t] -= table[c][f][t] * abs(int(s)) / 324;
-    table[c][f][t] += int(s) * 32;
-  }
-
-private:
-  Score table[ColorNum][SquareNum + PieceTypeNum][SquareNum];
-};
 
 
 class MovePicker {
@@ -61,7 +53,7 @@ public:
 	MovePicker(const Position&, Move, const Depth, const Square);
 	MovePicker(const Position&, const Move, Score);
     MovePicker(const Position&, const Move, const Depth, Search::Stack*);
-	Move nextMove();
+	Move nextMove(bool skipQuiets = false);
 
 private:
 	void scoreCaptures();

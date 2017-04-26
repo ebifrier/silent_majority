@@ -7,7 +7,7 @@
 #include "evaluate.hpp"
 
 template<typename T> struct Stats;
-typedef Stats<Score> CounterMoveStats;
+typedef Stats<int> CounterMoveStats;
 
 namespace Search {
 
@@ -19,7 +19,7 @@ struct Stack {
 	Move excludedMove; // todo: これは必要？
 	Move killers[2];
 	Score staticEval;
-	Score history;
+	int history;
     int moveCount;
 	EvalSum staticEvalRaw; // 評価関数の差分計算用、値が入っていないときは [0] を ScoreNotEvaluated にしておく。
 						   // 常に Black 側から見た評価値を入れておく。
@@ -32,7 +32,7 @@ struct RootMove {
 
 	bool operator < (const RootMove& m) const { return m.score < score; }
 	bool operator == (const Move& m) const { return pv[0] == m; }
-    bool extract_ponder_from_tt(Position& pos);
+    bool extractPonderFromTT(Position& pos);
 #ifdef USE_extractPVFromTT
 	void extractPVFromTT(Position& pos);
 #endif
