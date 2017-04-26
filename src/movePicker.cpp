@@ -87,7 +87,7 @@ MovePicker::MovePicker(const Position& p, const Move ttm, Score th)
 	ttMove = (ttm
 			  && pos.moveIsPseudoLegal(ttm)
 			  && ttm.isCaptureOrPawnPromotion()
-			  && pos.see(ttm) > threshold ? ttm : MOVE_NONE);
+			  && pos.seeGe(ttm, threshold + 1) ? ttm : MOVE_NONE);
 
 	stage += (ttMove == MOVE_NONE);
 }
@@ -154,7 +154,7 @@ Move MovePicker::nextMove() {
 		{
 			move = pick_best(cur++, endMoves);
 			if (move != ttMove) {
-				if (pos.seeSign(move) >= ScoreZero)
+				if (pos.seeGe(move, ScoreZero))
 					return move;
 
 				// Losing capture, move it to the beginning of the array
@@ -252,7 +252,7 @@ Move MovePicker::nextMove() {
 		{
 			move = pick_best(cur++, endMoves);
 			if (move != ttMove 
-				&& pos.see(move) > threshold)
+				&& pos.seeGe(move, threshold + 1))
 				return move;
 		}
 		break;

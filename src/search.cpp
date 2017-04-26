@@ -1137,7 +1137,7 @@ moves_loop:
 		// step12
 		if (givesCheck 
 			&& !moveCountPruning 
-			&& pos.seeSign(move) >= ScoreZero)
+			&& pos.seeGe(move, ScoreZero))
 			extension = OnePly;
 
 		// singuler extension
@@ -1187,12 +1187,12 @@ moves_loop:
 					continue;
 
 				if (lmrDepth < 8
-					&& pos.seeSign(move) < Score(-35 * lmrDepth * lmrDepth))
+					&& !pos.seeGe(move, Score(-35 * lmrDepth * lmrDepth)))
 					continue;
 			}
 			else if (depth < 7 * OnePly
 					 && !extension
-					 && pos.seeSign(move) < Score(-PawnScore * int(depth / OnePly)))
+					 && !pos.seeGe(move, Score(-PawnScore * int(depth / OnePly))))
 				continue;
 		}
 
@@ -1231,7 +1231,7 @@ moves_loop:
 				else if (!move.isDrop()//type_of(move) == NORMAL
 						 //&& pieceToPieceType(pos.piece(move.to())) != Pawn //type_of(pos.piece(move.to())) != Pawn
 						 && move.isPromotion()
-						 && pos.see(makeMove(move.pieceTypeFrom(), move.to(), move.from()), 0) < ScoreZero)
+						 && !pos.seeGe(makeMove(move.pieceTypeFrom(), move.to(), move.from()), ScoreZero))
 					r -= 2 * OnePly;
 #endif
 
@@ -1480,7 +1480,7 @@ Score qsearch(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dep
 				continue;
 			}
 
-			if (futilityBase <= alpha && pos.see(move) <= ScoreZero) {
+			if (futilityBase <= alpha && !pos.seeGe(move, ScoreZero + 1)) {
 				bestScore = std::max(bestScore, futilityBase);
 				continue;
 			}
@@ -1492,7 +1492,7 @@ Score qsearch(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dep
 
 		if ((!INCHECK || evasionPrunable)
 			&& (!move.isPromotion() || move.pieceTypeFrom() != Pawn)
-			&& pos.seeSign(move) < ScoreZero)
+			&& !pos.seeGe(move, ScoreZero))
 		{
 			continue;
 		}
