@@ -3,33 +3,7 @@
 TranspositionTable TT; // Our global transposition table
 
 void TranspositionTable::resize(size_t mbSize) { // Mega Byte 指定
-	/*// 確保する要素数を取得する。
-	size_t newSize = (mbSize << 20) / sizeof(TTCluster);
-	newSize = std::max(static_cast<size_t>(1024), newSize); // 最小値は 1024 としておく。
-	// 確保する要素数は 2 のべき乗である必要があるので、MSB以外を捨てる。
-	const int msbIndex = 63 - firstOneFromMSB(static_cast<u64>(newSize));
-	newSize = UINT64_C(1) << msbIndex;
-
-	if (newSize == size)
-		// 現在と同じサイズなら何も変更する必要がない。
-		return;
-
-	size = newSize;
-	delete [] entries;
-	entries = new (std::nothrow) TTCluster[newSize];
-	if (!entries) {
-		std::cerr << "Failed to allocate transposition table: " << mbSize << "MB";
-		exit(EXIT_FAILURE);
-	}
-	clear();
-    */
-    // 確保する要素数を取得する。
-    size_t newSize = (mbSize << 20) / sizeof(Cluster);
-    newSize = std::max(static_cast<size_t>(1024), newSize); // 最小値は 1024 としておく。
-    // 確保する要素数は 2 のべき乗である必要があるので、MSB以外を捨てる。
-    const int msbIndex = 63 - firstOneFromMSB(static_cast<u64>(newSize));
-    newSize = UINT64_C(1) << msbIndex;
-    size_t newClusterCount = newSize;//size_t(1) << 63 - firstOneFromMSB((mbSize * 1024 * 1024) / sizeof(TTCluster));
+    size_t newClusterCount = size_t(1) << msb((mbSize * 1024 * 1024) / sizeof(Cluster));
 
     if (newClusterCount == clusterCount)
       return;
@@ -74,8 +48,8 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
       // nature we add 259 (256 is the modulus plus 3 to keep the lowest
       // two bound bits from affecting the result) to calculate the entry
       // age correctly even after generation8 overflows into the next cycle.
-      if (  replace->depth8 - ((259 + generation8 - replace->genBound8) & 0xFC) * 2 * OnePly
-          >   tte[i].depth8 - ((259 + generation8 -   tte[i].genBound8) & 0xFC) * 2 * OnePly)
+      if (  replace->depth8 - ((259 + generation8 - replace->genBound8) & 0xFC) * 2
+          >   tte[i].depth8 - ((259 + generation8 -   tte[i].genBound8) & 0xFC) * 2)
           replace = &tte[i];
 
   return found = false, replace;

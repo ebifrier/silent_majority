@@ -16,6 +16,11 @@
 //       from, to , promo だけだったら、16bit で済む。
 class Move {
 public:
+	static const u32 PromoteFlag = 1 << 14;
+	static const u32 MoveNone    = 0;
+	static const u32 MoveNull    = 129;
+	static const u32 MovePVsEnd  = 1 << 15; // for learn
+
 	Move() {}
 	explicit Move(const u32 u) : value_(u) {}
 	Move& operator = (const Move& m) { value_ = m.value_; return *this; }
@@ -65,8 +70,8 @@ public:
 		return pieceTypeToHandPiece(pieceTypeDropped());
 	}
 	// 値が入っているか。
-	bool isNone() const { return (value() == MoveNone); }
-    bool is_ok() const { return to() != from(); }
+	explicit operator bool() const { return value() != MoveNone; }
+	bool isAny() const { return (value() != MoveNone); }
 	// メンバ変数 value_ の取得
 	u32 value() const { return value_; }
 	Move operator |= (const Move rhs) {
@@ -77,6 +82,10 @@ public:
 	bool operator == (const Move rhs) const { return this->value() == rhs.value(); }
 	bool operator != (const Move rhs) const { return !(*this == rhs); }
 	bool operator < (const Move rhs) const { return this->value() < rhs.value(); } // for learn
+    bool isOK() const {
+        static_assert(MoveNull == 129, "");
+        return to() != from(); // catch MoveNull and MoveNone
+    }
 	std::string promoteFlagToStringUSI() const { return (this->isPromotion() ? "+" : ""); }
 	std::string toUSI() const;
 	std::string toCSA() const;
@@ -87,11 +96,6 @@ public:
 	// 格納するその他のPVの最後に MovePVsEnd を格納する。それをフラグに次の指し手に遷移する。
 	// 正解のPV, MoveNone, その他0のPV, MoveNone, その他1のPV, MoveNone, MovePVsEnd という感じに並ぶ。
 	static Move movePVsEnd() { return Move(MovePVsEnd); }
-
-	static const u32 PromoteFlag = 1 << 14;
-	static const u32 MoveNone    = 0;
-	static const u32 MoveNull    = 129;
-	static const u32 MovePVsEnd  = 1 << 15; // for learn
 
 private:
 	u32 value_;
@@ -148,7 +152,7 @@ inline Move makeCapturePromoteMove(const PieceType pt, const Square from, const 
 // todo: PieceType を HandPiece に変更
 inline Move makeDropMove(const PieceType pt, const Square to) { return from2Move(drop2From(pt)) | to2Move(to); }
 
-struct MoveStack {
+struct ExtMove {
 	Move move;
 	int score;
 
@@ -157,8 +161,8 @@ struct MoveStack {
 };
 
 // insertionSort() や std::sort() で必要
-inline bool operator < (const MoveStack& f, const MoveStack& s) { return f.score < s.score; }
-inline bool operator > (const MoveStack& f, const MoveStack& s) { return f.score > s.score; }
+inline bool operator < (const ExtMove& f, const ExtMove& s) { return f.score < s.score; }
+inline bool operator > (const ExtMove& f, const ExtMove& s) { return f.score > s.score; }
 
 // 汎用的な insertion sort. 要素数が少ない時、高速にソートできる。
 // 降順(大きいものが先頭付近に集まる)
@@ -183,15 +187,15 @@ template <typename T, bool UseSentinel = false> inline void insertionSort(T firs
 }
 
 // 最も score の高い moveStack のポインタを返す。
-// MoveStack の数が多いとかなり時間がかかるので、
+// ExtMove の数が多いとかなり時間がかかるので、
 // 駒打ちを含むときに使用してはならない。
-inline MoveStack* pickBest(MoveStack* currMove, MoveStack* lastMove) {
+inline ExtMove* pickBest(ExtMove* currMove, ExtMove* lastMove) {
 	std::swap(*currMove, *std::max_element(currMove, lastMove));
 	return currMove;
 }
 
 inline Move move16toMove(const Move move, const Position& pos) {
-	if (move.isNone())
+	if (!move)
 		return Move::moveNone();
 	if (move.isDrop())
 		return move;

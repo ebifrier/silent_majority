@@ -152,6 +152,7 @@ inline std::array<Tl, 2> operator -= (std::array<Tl, 2>& lhs, const std::array<T
 }
 
 template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterBase {
+#ifdef LEARN
 	static const int R_Mid = 8; // 相対位置の中心のindex
 	constexpr int MaxWeight() const { return 1 << 22; } // KPE自体が1/32の寄与。更にKPEの遠隔駒の利きが1マスごとに1/2に減衰する分(最大でKEEの際に8マス離れが2枚)
 														// 更に重みを下げる場合、MaxWeightを更に大きくしておく必要がある。
@@ -309,7 +310,7 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 			const Color jcolor = pieceToColor(jpiece);
 			const PieceType jpt = pieceToPieceType(jpiece);
 			Bitboard jtoBB = setMaskBB(ksq).notThisAnd(Position::attacksFrom(jpt, jcolor, jsq, setMaskBB(ksq)));
-			while (jtoBB.isNot0()) {
+			while (jtoBB) {
 				Square jto = jtoBB.firstOneFromSQ11();
 				if (kfile == File5 && SQ59 < jto)
 					jto = inverseFile(jto);
@@ -392,7 +393,7 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 				const PieceType jipt = pieceToPieceType(jipiece);
 				const Bitboard mask = setMaskBB(ksq) | setMaskBB(ijsq);
 				Bitboard jitoBB = mask.notThisAnd(Position::attacksFrom(jipt, jicolor, jisq, mask));
-				while (jitoBB.isNot0()) {
+				while (jitoBB) {
 					Square jito = jitoBB.firstOneFromSQ11();
 					Square ijsq_tmp = ijsq;
 					assert(ksq <= SQ59);
@@ -487,11 +488,11 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 				const Bitboard jmask = setMaskBB(ksq) | setMaskBB(isq);
 				Bitboard itoBB = imask.notThisAnd(Position::attacksFrom(jpt, icolor, isq, imask));
 				Bitboard jtoBB = jmask.notThisAnd(Position::attacksFrom(jpt, jcolor, jsq, jmask));
-				while (itoBB.isNot0()) {
+				while (itoBB) {
 					const Square ito = itoBB.firstOneFromSQ11();
 					const int itodistance = squareDistance(isq, ito);
 					Bitboard jtoBB_tmp = jtoBB;
-					while (jtoBB_tmp.isNot0()) {
+					while (jtoBB_tmp) {
 						const Square jto = jtoBB_tmp.firstOneFromSQ11();
 						const int jtodistance = squareDistance(jsq, jto);
 						const int distance = itodistance + jtodistance - 1;
@@ -646,7 +647,7 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 					const PieceType ipt = pieceToPieceType(ipiece);
 					const Color icolor = pieceToColor(ipiece);
 					Bitboard itoBB = setMaskBB(ksq).notThisAnd(Position::attacksFrom(ipt, icolor, isq, setMaskBB(ksq)));
-					while (itoBB.isNot0()) {
+					while (itoBB) {
 						Square ito = itoBB.firstOneFromSQ11();
 						const int distance = squareDistance(isq, ito);
 						ret[retIdx++] = std::make_pair(sign*(&kkps.r_ke[icolor][R_Mid + -abs(makeFile(ksq) - makeFile(ito))][R_Mid + makeRank(ksq) - makeRank(ito)] - oneArrayKKP(0)), MaxWeight() >> (distance+4));
@@ -664,7 +665,7 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 				const Color icolor = pieceToColor(ipiece);
 
 				Bitboard itoBB = setMaskBB(ksq).notThisAnd(Position::attacksFrom(ipt, icolor, isq, setMaskBB(ksq)));
-				while (itoBB.isNot0()) {
+				while (itoBB) {
 					Square ito = itoBB.firstOneFromSQ11();
 					const int distance = squareDistance(isq, ito);
 					if (makeFile(ksq) == File5 && SQ59 < ito)
@@ -729,7 +730,7 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 			const PieceType ipt = pieceToPieceType(ipiece);
 			const Bitboard mask = setMaskBB(ksq0) | setMaskBB(ksq1);
 			Bitboard itoBB = mask.notThisAnd(Position::attacksFrom(ipt, icolor, isq, mask));
-			while (itoBB.isNot0()) {
+			while (itoBB) {
 				Square ito = itoBB.firstOneFromSQ11();
 				const int distance = squareDistance(isq, ito);
 				if (makeFile(ksq0) == File5 && makeFile(ksq1) == File5 && SQ59 < ito)
@@ -814,6 +815,7 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 		assert(retIdx <= KKIndicesMax);
 	}
 	void clear() { memset(this, 0, sizeof(*this)); } // float 型とかだと規格的に 0 は保証されなかった気がするが実用上問題ないだろう。
+#endif
 };
 
 struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, std::array<s32, 2> > {
@@ -821,9 +823,6 @@ struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, 
 	static std::array<s16, 2> KPP[SquareNum][fe_end][fe_end];
 	static std::array<s32, 2> KKP[SquareNum][SquareNum][fe_end];
 	static std::array<s32, 2> KK[SquareNum][SquareNum];
-#if defined USE_K_FIX_OFFSET
-	static const s32 K_Fix_Offset[SquareNum];
-#endif
 
 	void clear() { memset(this, 0, sizeof(*this)); }
 	static std::string addSlashIfNone(const std::string& str) {
@@ -841,9 +840,9 @@ struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, 
 				return;
 		}
 		clear();
-		readSomeSynthesized(dirName);
-		read(dirName);
-		setEvaluate();
+//		readSomeSynthesized(dirName);
+//		read(dirName);
+//		setEvaluate();
 	}
 
 #define ALL_SYNTHESIZED_EVAL {									\
@@ -869,6 +868,7 @@ struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, 
 		ALL_SYNTHESIZED_EVAL;
 #undef FOO
 	}
+#ifdef LEARN
 	static void readSomeSynthesized(const std::string& dirName) {
 #define FOO(x) {														\
 			std::ifstream ifs((addSlashIfNone(dirName) + #x "_some_synthesized.bin").c_str(), std::ios::binary); \
@@ -1064,6 +1064,7 @@ struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, 
 		SYNCCOUT << "info string end setting eval table" << SYNCENDL;
 #endif
 	}
+#endif
 };
 
 extern const int kppArray[31];
@@ -1159,9 +1160,13 @@ struct EvalSum {
 class Position;
 //struct SearchStack;
 
+#if !defined HAVE_AVX2
 const size_t EvaluateTableSize = 0x400000; // 134MB
+#else
+const size_t EvaluateTableSize = 0x2000000; // 1GB
 //const size_t EvaluateTableSize = 0x10000000; // 8GB
 //const size_t EvaluateTableSize = 0x20000000; // 17GB
+#endif
 
 using EvaluateHashEntry = EvalSum;
 struct EvaluateHashTable : HashTable<EvaluateHashEntry, EvaluateTableSize> {};

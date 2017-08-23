@@ -75,7 +75,7 @@ Key Book::bookKey(const Position& pos) {
 	Key key = 0;
 	Bitboard bb = pos.occupiedBB();
 
-	while (bb.isNot0()) {
+	while (bb) {
 		const Square sq = bb.firstOneFromSQ11();
 		key ^= ZobPiece[pos.piece(sq)][sq];
 	}
@@ -186,7 +186,7 @@ void makeBook(Position& pos, std::istringstream& ssCmd) {
 		while (!line.empty()) {
 			const std::string moveStrCSA = line.substr(0, 6);
 			const Move move = csaToMove(pos, moveStrCSA);
-			if (move.isNone()) {
+			if (!move) {
 				pos.print();
 				std::cout << "!!! Illegal move = " << moveStrCSA << " !!!" << std::endl;
 				break;
@@ -222,7 +222,7 @@ void makeBook(Position& pos, std::istringstream& ssCmd) {
 					SetUpStates->pop();
 
 					// doMove してから search してるので点数が反転しているので直す。
-                    const Score score = -pos.thisThread()->rootMoves[0].score;//-Search::RootMoves[0].score;
+                    const Score score = -pos.thisThread()->rootMoves[0].score;
 #else
 					const Score score = ScoreZero;
 #endif

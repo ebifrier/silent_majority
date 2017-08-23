@@ -21,7 +21,7 @@ namespace {
 	inline int cpuCoreCount() {
         // todo: boost::thread::physical_concurrency() を使うこと。
 		// std::thread::hardware_concurrency() は 0 を返す可能性がある。
-		return std::max(static_cast<int>(std::thread::hardware_concurrency()/2), 1);
+		return std::max(static_cast<int>(std::thread::hardware_concurrency()), 1);
 	}
 
 	class StringToPieceTypeCSA : public std::map<std::string, PieceType> {
@@ -71,27 +71,34 @@ bool CaseInsensitiveLess::operator () (const std::string& s1, const std::string&
 }
 
 void init(OptionsMap& o) {
-	o["USI_Hash"]                    = Option(256, 1, 65536, onHashSize);
+	const int MaxHashMB = 1024 * 1024;
+	o["USI_Hash"]                    = Option(64, 1, MaxHashMB, onHashSize);
 	o["Clear_Hash"]                  = Option(onClearHash);
 	o["Book_File"]                   = Option("book/20150503/book.bin");
 	o["Best_Book_Move"]              = Option(false);
-	o["OwnBook"]                     = Option(true);
-	o["Min_Book_Ply"]                = Option(SHRT_MAX, 0, SHRT_MAX);
-	o["Max_Book_Ply"]                = Option(SHRT_MAX, 0, SHRT_MAX);
+	o["OwnBook"]                     = Option(false);
+	o["Min_Book_Ply"]                = Option(256, 0, 256);
+	o["Max_Book_Ply"]                = Option(256, 0, 256);
 	o["Min_Book_Score"]              = Option(-180, -ScoreInfinite, ScoreInfinite);
-	o["Eval_Dir"]                    = Option("20160307", onEvalDir);
-	o["Write_Synthesized_Eval"]      = Option(false);
-	o["USI_Ponder"]                  = Option(true);
-	o["Byoyomi_Margin"]              = Option(500, 0, INT_MAX);
+	o["Eval_Dir"]                    = Option("20161007", onEvalDir);
+//	o["Write_Synthesized_Eval"]      = Option(false);
+	o["USI_Ponder"]                  = Option(false);
+	o["Byoyomi_Margin"]              = Option(0, 0, INT_MAX);
+    o["Inc_Margin"]                  = Option(3000, 0, INT_MAX);
 	o["MultiPV"]                     = Option(1, 1, MaxLegalMoves);
 	o["Skill_Level"]                 = Option(20, 0, 20);
-	o["Max_Random_Score_Diff"]       = Option(0, 0, ScoreMate0Ply);
-	o["Max_Random_Score_Diff_Ply"]   = Option(40, 0, SHRT_MAX);
-	o["Slow_Mover"]                  = Option(100, 10, 1000);
-	o["Minimum_Thinking_Time"]       = Option(1500, 0, INT_MAX);
-	o["Threads"]                     = Option(cpuCoreCount(), 1, 128, onThreads);
+//	o["Max_Random_Score_Diff"]       = Option(0, 0, ScoreMate0Ply);
+//	o["Max_Random_Score_Diff_Ply"]   = Option(0, 0, SHRT_MAX);
+	o["Slow_Mover"]                  = Option(89, 10, 1000);
+	o["Minimum_Thinking_Time"]       = Option(10, 0, INT_MAX);
+	o["Threads"]                     = Option(cpuCoreCount(), 1, 512, onThreads);
     o["Move_Overhead"] = Option(30, 0, 5000);
-    o["nodestime"] = Option(0, 0, 10000);
+    o["nodestime"]     = Option(0, 0, 10000);
+	o["PvInterval"]    = Option(100, 0, 10000);
+	o["Contempt"]      = Option(0, -100, 100);
+#ifdef RESIGN
+    o["Resign"]        = Option(2000, 0, 10000);
+#endif
 }
 
 Option::Option(const char* v, Fn* f) :
@@ -163,12 +170,11 @@ void go(const Position& pos, std::istringstream& ssCmd) {
 		if      (token == "ponder"     ) limits.ponder = true;
 		else if (token == "btime"      ) ssCmd >> limits.time[Black];
 		else if (token == "wtime"      ) ssCmd >> limits.time[White];
+        else if (token == "binc"       ) ssCmd >> limits.inc[Black];
+        else if (token == "winc"       ) ssCmd >> limits.inc[White];
 		else if (token == "infinite"   ) limits.infinite = true;
-		else if (token == "byoyomi" || token == "movetime") {
-			// btime wtime の後に byoyomi が来る前提になっているので良くない。
-			ssCmd >> limits.moveTime;
-			if (limits.moveTime != 0) { limits.moveTime -= Options["Byoyomi_Margin"]; }
-		}
+		else if (token == "byoyomi" || token == "movetime") { ssCmd >> limits.moveTime; }
+		else if (token == "mate"       ) { ssCmd >> limits.mate; }
 		else if (token == "depth"      ) { ssCmd >> limits.depth; }
 		else if (token == "nodes"      ) { ssCmd >> limits.nodes; }
 		else if (token == "searchmoves") {
@@ -176,6 +182,11 @@ void go(const Position& pos, std::istringstream& ssCmd) {
 				moves.push_back(usiToMove(pos, token));
 		}
 	}
+    if (limits.moveTime != 0)
+        limits.moveTime -= Options["Byoyomi_Margin"];
+    else if (limits.inc[pos.turn()] != 0)
+        limits.time[pos.turn()] -= Options["Inc_Margin"];
+
 	Search::SearchMoves = moves;
 	Threads.startThinking(pos, limits, moves);
 }
@@ -326,7 +337,7 @@ void setPosition(Position& pos, std::istringstream& ssCmd) {
 	Ply currentPly = pos.gamePly();
 	while (ssCmd >> token) {
 		const Move move = usiToMove(pos, token);
-		if (move.isNone()) break;
+		if (!move) break;
 		Search::SetUpStates->push(StateInfo());
 		pos.doMove(move, Search::SetUpStates->top());
 		++currentPly;
@@ -367,11 +378,11 @@ void setOption(std::istringstream& ssCmd) {
 void measureGenerateMoves(const Position& pos) {
 	pos.print();
 
-	MoveStack legalMoves[MaxLegalMoves];
+	ExtMove legalMoves[MaxLegalMoves];
 	for (int i = 0; i < MaxLegalMoves; ++i) legalMoves[i].move = moveNone();
-	MoveStack* pms = &legalMoves[0];
+	ExtMove* pms = &legalMoves[0];
 	const u64 num = 5000000;
-    Time_ t = Time_::currentTime();
+    Timer t = Timer::currentTime();
 	if (pos.inCheck()) {
 		for (u64 i = 0; i < num; ++i) {
 			pms = &legalMoves[0];
@@ -401,7 +412,7 @@ void measureGenerateMoves(const Position& pos) {
 #endif
 
 #ifdef NDEBUG
-const std::string MyName = "SILENT_MAJORITY";
+const std::string MyName = "SILENT_MAJORITY 1.25";
 #else
 const std::string MyName = "Apery Debug Build";
 #endif
@@ -445,17 +456,16 @@ void USI::loop(int argc, char* argv[]) {
 		else if (token == "usinewgame") {
             Search::clear();
             Time.availableNodes = 0;
-#if defined INANIWA_SHIFT
-			inaniwaFlag = NotInaniwa;
-#endif
-			for (int i = 0; i < 100; ++i) g_randomTimeSeed(); // 最初は乱数に偏りがあるかも。少し回しておく。
 		}
 		else if (token == "usi"      ) SYNCCOUT << "id name " << MyName
-												<< "\nid author Hiraoka Takuya , T. Romstad, M. Costalba, J. Kiiski, G. Linscott and more"
+												<< "\nid author Hiraoka Takuya, T. Romstad, M. Costalba, J. Kiiski, G. Linscott and more"
 												<< "\n" << Options
 												<< "\nusiok" << SYNCENDL;
 		else if (token == "go"       ) go(pos, ssCmd);
-		else if (token == "isready"  ) SYNCCOUT << "readyok" << SYNCENDL;
+		else if (token == "isready") {
+			std::unique_ptr<Evaluater>(new Evaluater)->init(Options["Eval_Dir"], true);
+			SYNCCOUT << "readyok" << SYNCENDL;
+		}
 		else if (token == "position" ) setPosition(pos, ssCmd);
 		else if (token == "setoption") setOption(ssCmd);
 #if defined LEARN
@@ -470,7 +480,10 @@ void USI::loop(int argc, char* argv[]) {
 #endif
 #if !defined MINIMUL
 		// 以下、デバッグ用
-		else if (token == "bench"    ) benchmark(pos, ssCmd);
+		else if (token == "bench") {
+			std::unique_ptr<Evaluater>(new Evaluater)->init(Options["Eval_Dir"], true);	
+			benchmark(pos, ssCmd);
+		}
 		else if (token == "key"      ) SYNCCOUT << pos.getKey() << SYNCENDL;
 		else if (token == "d"        ) pos.print();
 		else if (token == "s"        ) measureGenerateMoves(pos);

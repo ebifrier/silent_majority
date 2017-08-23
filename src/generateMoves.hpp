@@ -23,20 +23,20 @@ enum MoveType {
 
 // MoveType の全ての指し手を生成
 template <MoveType MT>
-MoveStack* generateMoves(MoveStack* moveStackList, const Position& pos);
+ExtMove* generateMoves(ExtMove* moveList, const Position& pos);
 template <MoveType MT>
-MoveStack* generateMoves(MoveStack* moveStackList, const Position& pos, const Square to);
+ExtMove* generateMoves(ExtMove* moveList, const Position& pos, const Square to);
 
 template <MoveType MT>
 class MoveList {
 public:
-	explicit MoveList(const Position& pos) : curr_(moveStackList_), last_(generateMoves<MT>(moveStackList_, pos)) {}
+	explicit MoveList(const Position& pos) : curr_(moveList_), last_(generateMoves<MT>(moveList_, pos)) {}
 	void operator ++ () { ++curr_; }
 	bool end() const { return (curr_ == last_); }
 	Move move() const { return curr_->move; }
-	size_t size() const { return static_cast<size_t>(last_ - moveStackList_); }
+	size_t size() const { return static_cast<size_t>(last_ - moveList_); }
 	bool contains(const Move move) const {
-		for (const MoveStack* it(moveStackList_); it != last_; ++it) {
+		for (const ExtMove* it(moveList_); it != last_; ++it) {
 			if (it->move == move)
 				return true;
 		}
@@ -44,9 +44,9 @@ public:
 	}
 
 private:
-	MoveStack moveStackList_[MaxLegalMoves];
-	MoveStack* curr_;
-	MoveStack* last_;
+	ExtMove moveList_[MaxLegalMoves];
+	ExtMove* curr_;
+	ExtMove* last_;
 };
 
 enum PromoteMode {

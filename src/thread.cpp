@@ -11,8 +11,6 @@ Thread::Thread() {
 
   resetCalls = exit = false;
   maxPly = callsCnt = 0;
-  history.clear();
-  counterMoves.clear();
   idx = Threads.size(); // Start from 0
 
   std::unique_lock<Mutex> lk(mutex);
@@ -67,6 +65,8 @@ void Thread::start_searching(bool resume) {
 
 void Thread::idle_loop() {
 
+  WinProcGroup::bindThisThread(idx);
+
   while (!exit)
   {
     std::unique_lock<Mutex> lk(mutex);
@@ -87,7 +87,7 @@ void Thread::idle_loop() {
 }
 
 void ThreadPool::init() {
-  push_back(new MainThread);
+  push_back(new MainThread());
 	readUSIOptions();
 }
 
@@ -102,16 +102,16 @@ void ThreadPool::readUSIOptions() {
 	assert(0 < requested);
 
 	while (size() < requested)
-      push_back(new Thread);
+      push_back(new Thread());
 
 	while (requested < size()) {
       delete back(), pop_back();
 	}
 }
 
-int64_t ThreadPool::nodes_searched() {
+uint64_t ThreadPool::nodes_searched() {
 
-  int64_t nodes = 0;
+  uint64_t nodes = 0;
   for (Thread* th : *this)
       nodes += th->rootPos.nodesSearched();
   return nodes;
@@ -150,7 +150,7 @@ void ThreadPool::startThinking(const Position& pos, const Search::LimitsType& li
 	Search::think();
 #else
 
-    main()->start_searching();
+	main()->start_searching();
 #endif
 }
 

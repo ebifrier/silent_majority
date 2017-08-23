@@ -40,10 +40,8 @@ int main(int argc, char* argv[]) {
 
     USI::init(Options);
     Threads.init();
-    TT.resize(Options["Hash"]);
+    TT.resize(Options["USI_Hash"]);
 
-	// 一時オブジェクトの生成と破棄
-	std::unique_ptr<Evaluater>(new Evaluater)->init(Options["Eval_Dir"], true);
 	USI::loop(argc, argv);
 	Threads.exit();
 }
